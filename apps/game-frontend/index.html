@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Mini Games - Root</title>
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      background: transparent;
+    }
+
+    /* ← transparent page */
+    .root {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      height: 100%;
+    }
+
+    header,
+    footer {
+      padding: 8px 12px;
+      color: #fff;
+      font-family: system-ui, sans-serif;
+    }
+
+    #canvas-wrap {
+      margin: 0 auto;
+      display: grid;
+      place-items: center;
+      background: transparent;
+      /* ← wrapper transparent too */
+    }
+
+    /* ensure the <canvas> never paints a background */
+    #canvas-wrap canvas {
+      background: transparent !important;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="root">
+    <header>
+      <div class="title">Mini Games Root</div>
+      <div class="controls">
+        <label>W <input id="w" type="number" value="720"></label>
+        <label>H <input id="h" type="number" value="1280"></label>
+        <button id="apply">Apply</button>
+        <span id="mode"></span>
+      </div>
+    </header>
+
+    <div id="canvas-wrap"></div>
+
+    <footer>
+      <small>Mode & sizing controlled in <code>appConfig.ts</code> (or query string).</small>
+    </footer>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+
+</html>

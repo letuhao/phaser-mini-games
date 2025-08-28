@@ -1,0 +1,57 @@
+{
+  "name": "Levi's Lucky Spin R3",
+  "brand": "Levi's",
+  "location": "Levi's Nguyễn Trãi (L15 – HCM)",
+  "reportTime": "10:00",
+  "effects": {
+    "season": "autumn",
+    "confetti": true,
+    "particles": [
+      "sparkle",
+      "paper"
+    ]
+  },
+  "spin": {
+    "minSpins": 3,
+    "maxSpins": 6,
+    "salt": "CHANGE_ME_SERVER_SALT",
+    "prizes": [
+      {
+        "id": "p100",
+        "label": "Voucher 50K",
+        "weightPermille": 120,
+        "type": "voucher",
+        "meta": {
+          "value": 50000
+        }
+      },
+      {
+        "id": "p101",
+        "label": "Voucher 100K",
+        "weightPermille": 80,
+        "type": "voucher",
+        "meta": {
+          "value": 100000
+        }
+      },
+      {
+        "id": "p200",
+        "label": "Ticket (email in 72h)",
+        "weightPermille": 30,
+        "type": "ticket"
+      },
+      {
+        "id": "p300",
+        "label": "Túi Tote (nhận tại quầy)",
+        "weightPermille": 20,
+        "type": "physical"
+      },
+      {
+        "id": "p000",
+        "label": "Chúc bạn may mắn lần sau",
+        "weightPermille": 750,
+        "type": "none"
+      }
+    ]
+  }
+}
