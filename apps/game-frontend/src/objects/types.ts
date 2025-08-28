@@ -1,6 +1,6 @@
 export type BaseObject = {
     id?: string;
-    type: 'background' | 'image' | 'sprite' | 'tileSprite' | 'rect' | 'text' | 'leaves' | 'ground' | 'rain' | 'water' | 'sunrays';
+    type: 'background' | 'image' | 'sprite' | 'tileSprite' | 'rect' | 'text' | 'leaves' | 'ground' | 'rain' | 'water' | 'sunrays' | 'sun' | 'lensflare';
     x?: number;
     y?: number;
     z?: number;          // display depth (Phaser's z-order)
@@ -89,6 +89,43 @@ export type SunRaysObject = BaseObject & {
     options?: import('../effects/SunRays').SunRaysOptions;
 };
 
+// --- SUN ---
+export type SunObject = BaseObject & {
+    type: 'sun';
+    /** If you omit x/y on the object, it will use options.static at runtime. */
+    options?: {
+        radius?: number;          // main disc radius
+        color?: number;           // main disc color
+        alpha?: number;           // main disc alpha
+        glow?: { radius?: number; alpha?: number; color?: number }; // additive halo
+
+        // Motion
+        mode?: 'static' | 'linear' | 'circle';
+        static?: { x: number; y: number }; // used when mode:'static'
+        linear?: {
+            from: { x: number; y: number };
+            to: { x: number; y: number };
+            duration?: number; // ms
+            yoyo?: boolean;
+            repeat?: -1 | number;
+            ease?: string;     // Phaser ease name
+        };
+        circle?: {
+            cx: number; cy: number; r: number;
+            angularSpeedDeg?: number; // deg/s (+ clockwise)
+            phaseDeg?: number;        // start angle
+            clockwise?: boolean;
+        };
+
+        flicker?: { amp?: number; freq?: number }; // subtle brightness flicker
+    };
+};
+
+export type LensFlareObject = BaseObject & {
+    type: 'lensflare';
+    options?: import('../effects/LensFlare').LensFlareOptions & { sourceId?: string };
+};
+
 export type SceneObject =
     | BackgroundObject
     | ImageObject
@@ -101,6 +138,8 @@ export type SceneObject =
     | RainObject
     | WaterSurfaceObject
     | SunRaysObject
+    | SunObject
+    | LensFlareObject
     ;
 
 export type ObjectsConfig = SceneObject[];

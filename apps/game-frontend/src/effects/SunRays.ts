@@ -22,6 +22,28 @@ export type SunRaysOptions = {
         stops: Array<{ at: number; color: number; alpha?: number }>; // at in [0..1]
     };
 
+    // NEW: motion — fixed by default
+    motion?: {
+        mode?: 'fixed' | 'follow';
+        /** id of a scene object to follow (e.g., a future 'sun' object) */
+        sourceId?: string;
+        /** add to the followed object's center */
+        offset?: { x?: number; y?: number };
+        /** optional gentle rotation around the source */
+        rotateSpeedDeg?: number;   // default 0 = no rotation
+        /** tiny angle wobble for life */
+        jitter?: { ampDeg?: number; freq?: number }; // default off
+    };
+
+    // NEW: dimming — global light (cloud-like), disabled by default
+    dimming?: {
+        enabled?: boolean;
+        base?: number;             // 0..1 (0 = no dim, 1 = fully dark with multiply)
+        amp?: number;              // additional +/- amount
+        freq?: number;             // Hz
+        noise?: number;            // random jitter per frame (0..1)
+    };
+
     // 🎛️ motion
     animate?: {
         enabled?: boolean;           // default: false (fixed)
@@ -54,6 +76,22 @@ function R(o?: SunRaysOptions): Resolved {
         lengthJitter: 0.15,
 
         // fixed by default (no rotation/pulse unless you turn it on)
+        motion: {
+            mode: 'fixed',
+            sourceId: undefined,
+            offset: { x: 0, y: 0 },
+            rotateSpeedDeg: 0,                  // ← fixed by default
+            jitter: { ampDeg: 0, freq: 0.2 },   // off by default
+        },
+
+        dimming: {
+            enabled: false,
+            base: 0,
+            amp: 0,
+            freq: 0.2,
+            noise: 0
+        },
+
         animate: {
             enabled: false,
             rotateSpeedDeg: 4,
@@ -96,6 +134,24 @@ function R(o?: SunRaysOptions): Resolved {
             profile: o.thickness?.profile ?? d.thickness.profile,
         },
         lengthJitter: o.lengthJitter ?? d.lengthJitter,
+
+        motion: {
+            mode: o.motion?.mode ?? d.motion.mode,
+            sourceId: o.motion?.sourceId ?? d.motion.sourceId,
+            offset: { x: o.motion?.offset?.x ?? 0, y: o.motion?.offset?.y ?? 0 },
+            rotateSpeedDeg: o.motion?.rotateSpeedDeg ?? d.motion.rotateSpeedDeg,
+            jitter: {
+                ampDeg: o.motion?.jitter?.ampDeg ?? d.motion?.jitter?.ampDeg,
+                freq: o.motion?.jitter?.freq ?? d.motion?.jitter?.freq,
+            }
+        },
+        dimming: {
+            enabled: o.dimming?.enabled ?? d.dimming.enabled,
+            base: o.dimming?.base ?? d.dimming.base,
+            amp: o.dimming?.amp ?? d.dimming.amp,
+            freq: o.dimming?.freq ?? d.dimming.freq,
+            noise: o.dimming?.noise ?? d.dimming.noise,
+        },
 
         animate: {
             enabled: o.animate?.enabled ?? d.animate.enabled,
@@ -171,11 +227,21 @@ export class SunRays {
     private seeds: number[] = [];
     private lastRayCount = 0;
 
+    private prevSrc = { x: 0, y: 0 };
+    private dimOverlay!: Phaser.GameObjects.Rectangle;
+
     constructor(private scene: Phaser.Scene, options: SunRaysOptions | undefined, depth = 50) {
         this.opts = R(options);
         this.depth = depth;
 
         const { width, height } = this.scene.scale;
+
+        // full-screen black rectangle with MULTIPLY to dim the scene
+        this.dimOverlay = this.scene.add
+            .rectangle(0, 0, width, height, 0x000000, 0)
+            .setOrigin(0)
+            .setDepth(this.depth - 1) // under rays but above scene
+            .setBlendMode(Phaser.BlendModes.MULTIPLY);
 
         this.rt = this.scene.add.renderTexture(0, 0, width, height).setOrigin(0).setDepth(this.depth);
         this.rt.setBlendMode(Phaser.BlendModes.ADD);
@@ -210,10 +276,24 @@ export class SunRays {
 
     private onResize() {
         const { width, height } = this.scene.scale;
+        this.dimOverlay.setSize(width, height).setPosition(0, 0);
         this.rt.setSize(width, height).setPosition(0, 0);
         this.maskRT.setSize(width, height).setPosition(0, 0);
         this.rebuildMask();
         this.redrawBeams(0, this.t);
+    }
+
+    private getCurrentSource(): { x: number; y: number } {
+        const m = this.opts.motion;
+        if (m.mode === 'follow' && m.sourceId) {
+            const go = this.scene.children.getByName(m.sourceId) as any;
+            if (go) {
+                // prefer getCenter if available
+                const c = go.getCenter ? go.getCenter() : { x: go.x ?? 0, y: go.y ?? 0 };
+                return { x: (c.x ?? 0) + (m.offset?.x ?? 0), y: (c.y ?? 0) + (m.offset?.y ?? 0) };
+            }
+        }
+        return { x: this.opts.source.x, y: this.opts.source.y };
     }
 
     private rebuildMask() {
@@ -324,25 +404,43 @@ export class SunRays {
     update(_time: number, deltaMs: number) {
         this.t += deltaMs / 1000;
 
-        // refresh occlusion (water level etc.)
-        if (performance.now() - this.lastMaskAt > this.opts.refreshMaskMs) {
-            this.rebuildMask();
-        }
+        // refresh occlusion periodically
+        if (performance.now() - this.lastMaskAt > this.opts.refreshMaskMs) this.rebuildMask();
 
         this.ensureSeeds();
 
-        if (this.opts.animate.enabled) {
-            // gentle rotation
-            const rot = (this.t * (this.opts.animate.rotateSpeedDeg ?? 0)) % 360;
-            this.redrawBeams(rot, this.t);
+        // --- Motion (fixed or follow) ---
+        const src = this.getCurrentSource();
+        const moved = Math.hypot(src.x - this.prevSrc.x, src.y - this.prevSrc.y) > 0.5;
+        this.prevSrc = src;
 
-            // alpha pulse
-            const a = this.opts.alpha
-                + Math.sin(this.t * ((this.opts.animate.pulseFreq ?? 0) * Math.PI * 2)) * (this.opts.animate.pulseAmp ?? 0);
-            this.rt.setAlpha(Phaser.Math.Clamp(a, 0, 1));
-        } else {
-            // fixed: only rebuild on demand (resize already handled)
-            // nothing per-frame except mask refresh above
+        let rot = 0;
+        if (this.opts.motion.rotateSpeedDeg) {
+            rot = (this.t * this.opts.motion.rotateSpeedDeg) % 360;
+        }
+        if (this.opts?.motion?.jitter?.ampDeg ?? 0 > 0) {
+            rot += Math.sin(this.t * ((this.opts?.motion?.jitter?.freq ?? 0) * Math.PI * 2)) * (this.opts?.motion?.jitter?.ampDeg ?? 0);
+        }
+
+        // redraw when needed:
+        // - if fixed: only when resized (handled elsewhere)
+        // - if follow or rotating/jittering: every frame (cheap enough)
+        if (this.opts.motion.mode === 'follow' || this.opts.motion.rotateSpeedDeg || (this.opts?.motion?.jitter?.ampDeg ?? 0)) {
+            this.opts.source = src; // update internal source
+            this.redrawBeams(rot, this.t);
+        }
+
+        // --- Light dimming (global) ---
+        if (this.opts.dimming.enabled) {
+            const base = this.opts.dimming.base ?? 0;
+            const amp = this.opts.dimming.amp ?? 0;
+            const freq = this.opts.dimming.freq ?? 0;
+            const noise = this.opts.dimming.noise;
+            const n = (noise ? (Math.random() - 0.5) * 2 * noise : 0);
+            const a = Phaser.Math.Clamp(base + Math.sin(this.t * (freq * Math.PI * 2)) * amp + n, 0, 1);
+            this.dimOverlay.setAlpha(a);
+        } else if (this.dimOverlay.alpha !== 0) {
+            this.dimOverlay.setAlpha(0);
         }
     }
 }

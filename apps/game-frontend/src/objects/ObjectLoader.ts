@@ -13,11 +13,15 @@ import {
     RainObject,
     WaterSurfaceObject,
     SunRaysObject,
+    SunObject,
+    LensFlareObject,
 } from './types';
 import { AutumnLeaves } from '../effects/AutumnLeaves';
 import { RainSystem } from '../effects/Rain';
 import { WaterSurface } from '../effects/WaterSurface';
 import { SunRays } from '../effects/SunRays';
+import { SunBody } from '../effects/Sun';
+import { LensFlare, LensFlareOptions } from '../effects/LensFlare';
 
 function applyCommon(o: Phaser.GameObjects.GameObject, cfg: SceneObject) {
     // @ts-ignore - setDepth exists on DisplayObject
@@ -197,6 +201,44 @@ function createSunRays(scene: Phaser.Scene, cfg: SunRaysObject) {
     return holder;
 }
 
+function createSun(scene: Phaser.Scene, cfg: SunObject) {
+    const depth = cfg.z ?? 39;
+    const sys = new SunBody(scene, cfg.options, depth);
+    const holder = scene.add.container(0, 0).setDepth(depth);
+    if (cfg.id) holder.setName(cfg.id);
+    // expose for others (SunRays follow, LensFlare source)
+    (holder as any).getCenter = () => sys.getCenter();
+    (holder as any).__sun = sys;
+    // also position holder at sun for name lookup center
+    holder.setPosition(sys.getCenter().x, sys.getCenter().y);
+    // keep holder synced
+    scene.events.on('update', () => {
+        const c = sys.getCenter(); holder.setPosition(c.x, c.y);
+    });
+    return holder;
+}
+
+function createLensFlare(scene: Phaser.Scene, cfg: LensFlareObject) {
+    const depth = cfg.z ?? 55;
+
+    // ⬅️ ensure we always pass a concrete LensFlareOptions
+    const opts: LensFlareOptions = {
+        sourceId: 'sun-body',          // sensible default
+        ...(cfg.options ?? {}),        // merge user options if provided
+    };
+
+    if (!opts.sourceId) {
+        console.warn('[lensflare] options.sourceId missing; using "sun-body"');
+        opts.sourceId = 'sun-body';
+    }
+
+    const sys = new LensFlare(scene, opts, depth);
+    const holder = scene.add.container(0, 0).setDepth(depth);
+    if (cfg.id) holder.setName(cfg.id);
+    (holder as any).__lensflare = sys;
+    return holder;
+}
+
 export function loadObjects(scene: Phaser.Scene, list: ObjectsConfig) {
     // sort by z so z=0 background is created first (optional; setDepth also ensures order)
     const sorted = [...list].sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
@@ -244,6 +286,12 @@ export function loadObjects(scene: Phaser.Scene, list: ObjectsConfig) {
                 break;
             case 'sunrays':
                 obj = createSunRays(scene, item as SunRaysObject);
+                break;
+            case 'sun':
+                obj = createSun(scene, item as SunObject);
+                break;
+            case 'lensflare':
+                obj = createLensFlare(scene, item as LensFlareObject);
                 break;
 
             default:

@@ -44,6 +44,42 @@ export const DemoObjects: ObjectsConfig = [
         }
     },
 
+    // Sun (circle motion)
+    {
+        id: 'sun-body', type: 'sun', z: 39, options: {
+            mode: 'circle',
+            circle: { cx: 220, cy: 80, r: 120, angularSpeedDeg: 6, phaseDeg: -20, clockwise: true },
+            radius: 20, color: 0xfff3c6, glow: { radius: 48, alpha: 0.65, color: 0xffe8aa },
+            flicker: { amp: 0.03, freq: 0.25 }
+        }
+    },
+
+    // Rays that follow the sun (from earlier)
+    {
+        id: 'sunrays', type: 'sunrays', z: 40, options: {
+            source: { x: 0, y: 0 },
+            motion: { mode: 'follow', sourceId: 'sun-body', rotateSpeedDeg: 0, jitter: { ampDeg: 0.8, freq: 0.12 } },
+            occluders: ['ground', 'water'],
+            gradient: {
+                layers: 6, stops: [
+                    { at: 0.0, color: 0xfffbf0, alpha: 0.9 },
+                    { at: 0.5, color: 0xffe8b2, alpha: 0.7 },
+                    { at: 1.0, color: 0xf4c677, alpha: 0.5 },
+                ]
+            }
+        }
+    },
+
+    // Lens flare sourced from the sun
+    {
+        id: 'lens', type: 'lensflare', z: 55, options: {
+            sourceId: 'sun-body',
+            occluders: ['ground', 'water'],
+            alpha: 0.9,
+            distanceFalloff: 0.6
+        }
+    },
+
     // Rain (collide with water first, then ground fallback)
     {
         id: 'rain',
@@ -101,16 +137,30 @@ export const DemoObjects: ObjectsConfig = [
         }
     },
 
-    //Animated: slow drift + pulse + subtle width wobble
+    //A) Default (fixed), just a nicer gradient
     // {
     //     id: 'sun', type: 'sunrays', z: 40, options: {
-    //         source: { x: 120, y: 80 },
-    //         rays: 14,
-    //         spreadDeg: 42,
-    //         length: 1500,
+    //         source: { x: 140, y: 90 },
+    //         rays: 12, spreadDeg: 36, length: 1400,
+    //         thickness: { min: 60, max: 160, profile: 'center-heavy' },
+    //         gradient: {
+    //             layers: 7, stops: [
+    //                 { at: 0.00, color: 0xfff7da, alpha: 0.9 },
+    //                 { at: 0.40, color: 0xffe7b3, alpha: 0.75 },
+    //                 { at: 1.00, color: 0xf1c27d, alpha: 0.45 },
+    //             ]
+    //         },
+    //         motion: { mode: 'fixed' },            // default
+    //         dimming: { enabled: false }           // default
+    //     }
+    // },
+
+    // {
+    //     id: 'sun', type: 'sunrays', z: 40, options: {
+    //         source: { x: 20, y: 20 },               // ignored when following
+    //         rays: 20, spreadDeg: 45, length: 2000,
     //         thickness: { min: 50, max: 150, profile: 'center-heavy' },
     //         lengthJitter: 0.2,
-    //         animate: { enabled: true, rotateSpeedDeg: 3, pulseAmp: 0.10, pulseFreq: 0.25, sizeJitterAmp: 10, sizeJitterFreq: 0.15 },
     //         gradient: {
     //             layers: 6, stops: [
     //                 { at: 0.0, color: 0xfffbf0, alpha: 0.9 },
@@ -118,31 +168,20 @@ export const DemoObjects: ObjectsConfig = [
     //                 { at: 1.0, color: 0xf4c677, alpha: 0.5 },
     //             ]
     //         },
-    //         occluders: ['ground', 'water'],
+    //         motion: {
+    //             mode: 'follow',
+    //             sourceId: 'sun-body',               // ← the object we’ll add later
+    //             offset: { x: 0, y: 0 },
+    //             rotateSpeedDeg: 0,                  // rays don't rotate, they just follow
+    //             jitter: { ampDeg: 0.8, freq: 0.12 } // tiny life-like shimmer
+    //         },
+    //         dimming: {
+    //             enabled: true,
+    //             base: 0.12, amp: 0.10, freq: 0.05, noise: 0.03
+    //         },
+    //         occluders: ['ground', 'water']
     //     }
-    // },
-
-    {
-        id: 'sun', type: 'sunrays', z: 40, options: {
-            source: { x: 140, y: 90 },
-            rays: 12,
-            spreadDeg: 36,
-            length: 1400,
-            thickness: { min: 60, max: 160, profile: 'center-heavy' },
-            lengthJitter: 0.12,
-            // gradient optional; below overrides the defaults a bit cooler:
-            gradient: {
-                layers: 7,
-                stops: [
-                    { at: 0.00, color: 0xfff7da, alpha: 0.9 },
-                    { at: 0.40, color: 0xffe7b3, alpha: 0.75 },
-                    { at: 1.00, color: 0xf1c27d, alpha: 0.45 },
-                ]
-            },
-            // animate omitted or enabled:false → fixed
-            occluders: ['ground', 'water', 'wheelHousing', 'titleBar'],
-        }
-    }
+    // }
 
     // {
     //     id: 'title',
