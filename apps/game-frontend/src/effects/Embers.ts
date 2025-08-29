@@ -1,4 +1,19 @@
 import Phaser from 'phaser';
+import { logInfo, logDebug, logError, logWarn } from '../core/Logger';
+
+/**
+ * Ember effect without Phaser particles:
+ * Uses a pool of Images, additive blend, and tweens to float upward then recycle.
+ * 
+ * LOGGING: This class uses the centralized logger system for better debugging control.
+ * - INFO level: Important lifecycle events (constructor, first-time bounds set)
+ * - DEBUG level: Detailed debugging information (spawn positions, sprite states)
+ * - ERROR level: Error conditions (if any occur)
+ * 
+ * To control logging: import { logger } from '../core/Logger' and use:
+ * - logger.setObjectEnabled('Embers', false) to disable all Embers logging
+ * - logger.setObjectLevel('Embers', LogLevel.INFO) to reduce verbosity
+ */
 
 type Opts = {
     count?: number;                  // how many embers in the pool
@@ -32,7 +47,7 @@ export class Embers {
         this.initialBudget = opts.budget ?? 12; // Store initial budget for later use
         this.debugSpawnArea = opts.debugSpawnArea ?? false;
         
-        console.log('[Embers] Constructor called with options:', {
+        logInfo('Embers', 'Constructor called with options', {
             pool,
             spawnArea: this.spawnArea,
             baseY: this.baseY,
@@ -43,17 +58,17 @@ export class Embers {
         // ensure a small round texture exists
         const key = 'fx-ember';
         if (!scene.textures.exists(key)) {
-            console.log('[Embers] Creating ember texture:', key);
+            logDebug('Embers', 'Creating ember texture', { key });
             const g = scene.add.graphics();
             g.fillStyle(0xffffff, 1).fillCircle(6, 6, 3);
             g.generateTexture(key, 12, 12);
             g.destroy();
         } else {
-            console.log('[Embers] Ember texture already exists:', key);
+            logDebug('Embers', 'Ember texture already exists', { key });
         }
 
         this.root = scene.add.container(0, 0).setName('embers');
-        console.log('[Embers] Root container created:', this.root);
+        logDebug('Embers', 'Root container created', this.root);
 
         // Create debug spawn area rectangle if enabled
         if (this.debugSpawnArea) {
@@ -66,7 +81,7 @@ export class Embers {
                 0.3 // Semi-transparent
             ).setOrigin(0.5, 0.5);
             this.root.add(this.debugRect);
-            console.log('[Embers] Debug spawn area rectangle created at container origin:', {
+            logDebug('Embers', 'Debug spawn area rectangle created at container origin', {
                 x: 0,
                 y: 0,
                 width: this.spawnArea.width,
@@ -75,7 +90,7 @@ export class Embers {
         }
 
         // build pool
-        console.log('[Embers] Building ember pool with', pool, 'embers');
+        logDebug('Embers', 'Building ember pool', { pool, emberCount: pool });
         for (let i = 0; i < pool; i++) {
             const sp = scene.add.image(0, 0, key)
                 .setBlendMode(Phaser.BlendModes.ADD)
@@ -83,11 +98,11 @@ export class Embers {
             this.root.add(sp);
             this.sprites.push(sp);
         }
-        console.log('[Embers] Pool built successfully. Sprites count:', this.sprites.length);
+        logDebug('Embers', 'Pool built successfully', { spritesCount: this.sprites.length });
 
         // Don't start embers until container bounds are set
         // This prevents them from spawning at wrong positions initially
-        console.log('[Embers] Waiting for container bounds before starting embers');
+        logDebug('Embers', 'Waiting for container bounds before starting embers');
         this.activeCount = 0;
     }
 
@@ -95,7 +110,7 @@ export class Embers {
     updateContainerBounds(bounds: { left: number; top: number; width: number; height: number }) {
         const wasFirstTime = !this.containerBounds;
         this.containerBounds = bounds;
-        console.log('[Embers] Container bounds updated:', bounds, 'wasFirstTime:', wasFirstTime);
+        logDebug('Embers', 'Container bounds updated', { bounds, wasFirstTime });
         
         // Update debug rectangle position if it exists
         if (this.debugRect && this.debugSpawnArea) {
@@ -105,13 +120,16 @@ export class Embers {
             const debugX = this.spawnArea.x + this.spawnArea.width / 2;
             const debugY = this.spawnArea.y + this.spawnArea.height / 2;
             this.debugRect.setPosition(debugX, debugY);
-            console.log('[Embers] Debug rectangle updated to container-relative position:', { x: debugX, y: debugY });
+            logDebug('Embers', 'Debug rectangle updated to container-relative position', { x: debugX, y: debugY });
         }
         
         // If this is the first time bounds are set, start the embers with the configured budget
         if (wasFirstTime) {
             const budget = Math.min(this.sprites.length, this.initialBudget);
-            console.log('[Embers] First time bounds set, starting embers with budget:', budget, '(configured:', this.initialBudget, ')');
+            logInfo('Embers', 'First time bounds set, starting embers with budget', { 
+                budget, 
+                configured: this.initialBudget 
+            });
             this.setBudget(budget);
         }
     }
@@ -124,41 +142,50 @@ export class Embers {
     /** Adjust how many embers are active. */
     setBudget(n: number) {
         const clamped = Phaser.Math.Clamp(n, 0, this.sprites.length);
-        console.log('[Embers] setBudget called:', { requested: n, clamped, currentActive: this.activeCount, totalSprites: this.sprites.length });
+        logDebug('Embers', 'setBudget called', { 
+            requested: n, 
+            clamped, 
+            currentActive: this.activeCount, 
+            totalSprites: this.sprites.length 
+        });
         
         if (clamped === this.activeCount) {
-            console.log('[Embers] Budget unchanged, returning early');
+            logDebug('Embers', 'Budget unchanged, returning early');
             return;
         }
 
         // Activate more
         if (clamped > this.activeCount) {
-            console.log('[Embers] Activating', clamped - this.activeCount, 'more embers');
+            logDebug('Embers', 'Activating more embers', { 
+                count: clamped - this.activeCount 
+            });
             for (let i = this.activeCount; i < clamped; i++) {
                 this.activate(this.sprites[i]);
             }
         }
         // Deactivate extras
         if (clamped < this.activeCount) {
-            console.log('[Embers] Deactivating', this.activeCount - clamped, 'embers');
+            logDebug('Embers', 'Deactivating embers', { 
+                count: this.activeCount - clamped 
+            });
             for (let i = clamped; i < this.activeCount; i++) {
                 this.deactivate(this.sprites[i]);
             }
         }
         
         this.activeCount = clamped;
-        console.log('[Embers] Budget updated. Active count now:', this.activeCount);
+        logDebug('Embers', 'Budget updated', { activeCount: this.activeCount });
     }
 
     // ---- internals ----
     private activate(sp: Phaser.GameObjects.Image) {
-        console.log('[Embers] Activating ember sprite:', sp);
+        logDebug('Embers', 'Activating ember sprite', sp);
         sp.setVisible(true);
         this.resetAndTween(sp);
     }
 
     private deactivate(sp: Phaser.GameObjects.Image) {
-        console.log('[Embers] Deactivating ember sprite:', sp);
+        logDebug('Embers', 'Deactivating ember sprite', sp);
         sp.setVisible(false);
         sp.removeAllListeners(); // stop tweens callbacks if any
         (sp.scene.tweens as any).killTweensOf?.(sp);
@@ -166,7 +193,7 @@ export class Embers {
 
     private resetAndTween(sp: Phaser.GameObjects.Image) {
         const scene = sp.scene;
-        console.log('[Embers] resetAndTween called for sprite:', sp);
+        logDebug('Embers', 'resetAndTween called for sprite', sp);
 
         // Calculate spawn position within container bounds
         let x: number;
@@ -195,7 +222,7 @@ export class Embers {
             x = Phaser.Math.Between(spawnX + margin, spawnX + spawnWidth - margin);
             y = Phaser.Math.Between(spawnY + margin, spawnY + spawnHeight - margin);
             
-            console.log('[Embers] Using simplified spawn area positioning:', {
+            logDebug('Embers', 'Using simplified spawn area positioning', {
                 containerBounds: this.containerBounds,
                 spawnArea: this.spawnArea,
                 calculatedPos: { x, y },
@@ -239,7 +266,7 @@ export class Embers {
             x = Phaser.Math.Between(this.spawnArea.x, this.spawnArea.x + this.spawnArea.width);
             y = Phaser.Math.Between(this.spawnArea.y, this.spawnArea.y + this.spawnArea.height);
             
-            console.log('[Embers] Using fallback positioning:', {
+            logDebug('Embers', 'Using fallback positioning', {
                 spawnArea: this.spawnArea,
                 calculatedPos: { x, y }
             });
@@ -257,7 +284,7 @@ export class Embers {
             .setAlpha(alphaStart)
             .setTint(0xffb15e);
 
-        console.log('[Embers] Ember positioned and styled:', {
+        logDebug('Embers', 'Ember positioned and styled', {
             position: { x, y },
             scale: { start: scaleStart, end: scaleEnd },
             alpha: alphaStart,
@@ -274,17 +301,17 @@ export class Embers {
             ease: 'Cubic.easeOut',
             duration: dur,
             onComplete: () => {
-                console.log('[Embers] Tween completed for sprite:', sp);
+                logDebug('Embers', 'Tween completed for sprite', sp);
                 // recycle only if still supposed to be active
                 if (sp.visible) {
-                    console.log('[Embers] Recycling ember sprite:', sp);
+                    logDebug('Embers', 'Recycling ember sprite', sp);
                     this.resetAndTween(sp);
                 } else {
-                    console.log('[Embers] Sprite not visible, not recycling:', sp);
+                    logDebug('Embers', 'Sprite not visible, not recycling', sp);
                 }
             }
         });
         
-        console.log('[Embers] Tween created for ember:', sp);
+        logDebug('Embers', 'Tween created for ember', sp);
     }
 }
