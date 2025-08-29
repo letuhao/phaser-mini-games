@@ -6,7 +6,7 @@ export const AppConfig = {
     mode: 'fit-parent' as CanvasMode,
     width: 1280,
     height: 720,
-    maxDevicePixelRatio: 1.5,
+    maxDevicePixelRatio: 2.0,
     background: '#06121b',      // old default bg (ignored when transparent is true)
     aspect: 1280 / 720,
     transparent: true,          // ← enable transparent canvas

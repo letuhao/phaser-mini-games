@@ -89,7 +89,7 @@ function makeGame(size: { width: number; height: number }) {
             powerPreference: 'high-performance',
             // clearBeforeRender: true, // default; keep if you see smearing artifacts
         },
-        pixelArt: true,
+        pixelArt: false,
         physics: {
             default: 'arcade',
             arcade: {
