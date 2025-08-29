@@ -27,6 +27,7 @@ import { SunBody } from '../effects/Sun';
 import { LensFlare, LensFlareOptions } from '../effects/LensFlare';
 import { Embers } from '../effects/Embers';
 import { UIButton } from '../ui/Button';
+import { logInfo, logDebug, logError, logWarn } from '../core/Logger';
 
 function applyCommon(o: Phaser.GameObjects.GameObject, cfg: SceneObject) {
     // @ts-ignore - setDepth exists on DisplayObject
@@ -188,7 +189,7 @@ function createText(scene: Phaser.Scene, cfg: TextObject) {
 }
 
 function createButton(scene: Phaser.Scene, cfg: ButtonObject) {
-    console.log('[ObjectLoader] Creating button:', cfg.id, cfg);
+    logDebug('ObjectLoader', 'Creating button', { id: cfg.id, config: cfg }, 'createButton');
     
     try {
         // Create UIButton with the configuration
@@ -225,23 +226,23 @@ function createButton(scene: Phaser.Scene, cfg: ButtonObject) {
                 : (cfg.onClick || (() => {})),
         });
         
-        console.log('[ObjectLoader] Button created successfully:', cfg.id, button);
+        logDebug('ObjectLoader', 'Button created successfully', { id: cfg.id, button }, 'createButton');
         
         // Apply common properties
         applyCommon(button.root, cfg);
         
-        console.log('[ObjectLoader] Button properties applied:', cfg.id, button.root);
+        logDebug('ObjectLoader', 'Button properties applied', { id: cfg.id, buttonRoot: button.root }, 'createButton');
         
         // Return the button root for compatibility with the object system
         return button.root;
     } catch (error) {
-        console.error('[ObjectLoader] Error creating button:', cfg.id, error);
+        logError('ObjectLoader', 'Error creating button', { id: cfg.id, error }, 'createButton');
         throw error;
     }
 }
 
 function createEffect(scene: Phaser.Scene, cfg: EffectObject) {
-    console.log('[ObjectLoader] Creating effect:', cfg.id, cfg.effectType, cfg);
+    logDebug('ObjectLoader', 'Creating effect', { id: cfg.id, effectType: cfg.effectType, config: cfg }, 'createEffect');
     
     try {
         let effect: any = null;
@@ -256,40 +257,40 @@ function createEffect(scene: Phaser.Scene, cfg: EffectObject) {
                     debugSpawnArea: cfg.debugSpawnArea ?? false,
                     // Container bounds will be set after creation via updateContainerBounds
                 };
-                console.log('[ObjectLoader] Creating Embers with options:', opts);
+                logDebug('ObjectLoader', 'Creating Embers with options', opts, 'createEffect');
                 effect = new Embers(scene, opts);
-                console.log('[ObjectLoader] Embers instance created:', effect);
+                logDebug('ObjectLoader', 'Embers instance created', { effect }, 'createEffect');
                 break;
             }
             // Add more effect types here as needed
             default:
-                console.warn('[ObjectLoader] Unknown effect type:', cfg.effectType, cfg.id);
+                logWarn('ObjectLoader', 'Unknown effect type', { effectType: cfg.effectType, id: cfg.id }, 'createEffect');
                 return null;
         }
         
         if (effect) {
-            console.log('[ObjectLoader] Effect created, setting budget and applying properties...');
+            logDebug('ObjectLoader', 'Effect created, setting budget and applying properties', undefined, 'createEffect');
             
             // Don't set budget here - let the effect handle it when container bounds are set
             // This prevents embers from spawning at wrong positions before bounds are known
-            console.log('[ObjectLoader] Budget will be set when container bounds are provided');
+            logDebug('ObjectLoader', 'Budget will be set when container bounds are provided', undefined, 'createEffect');
             
             // Apply common properties
-            console.log('[ObjectLoader] Applying common properties...');
+            logDebug('ObjectLoader', 'Applying common properties', undefined, 'createEffect');
             applyCommon(effect.root, cfg);
             
             // Store the effect instance for later access
             (effect.root as any).__embers = effect;
-            console.log('[ObjectLoader] Stored __embers reference:', (effect.root as any).__embers);
+            logDebug('ObjectLoader', 'Stored __embers reference', { __embers: (effect.root as any).__embers }, 'createEffect');
             
-            console.log('[ObjectLoader] Effect created successfully:', cfg.id, effect);
+            logDebug('ObjectLoader', 'Effect created successfully', { id: cfg.id, effect }, 'createEffect');
             return effect.root;
         }
         
-        console.warn('[ObjectLoader] No effect was created');
+        logWarn('ObjectLoader', 'No effect was created', undefined, 'createEffect');
         return null;
     } catch (error) {
-        console.error('[ObjectLoader] Error creating effect:', cfg.id, error);
+        logError('ObjectLoader', 'Error creating effect', { id: cfg.id, error }, 'createEffect');
         throw error;
     }
 }
@@ -372,10 +373,10 @@ function createLensFlare(scene: Phaser.Scene, cfg: LensFlareObject) {
         ...(cfg.options ?? {}),        // merge user options if provided
     };
 
-    if (!opts.sourceId) {
-        console.warn('[lensflare] options.sourceId missing; using "sun-body"');
-        opts.sourceId = 'sun-body';
-    }
+            if (!opts.sourceId) {
+            logWarn('ObjectLoader', 'options.sourceId missing; using "sun-body"', { options: opts }, 'createLensFlare');
+            opts.sourceId = 'sun-body';
+        }
 
     const sys = new LensFlare(scene, opts, depth);
     const holder = scene.add.container(0, 0).setDepth(depth);
@@ -385,14 +386,14 @@ function createLensFlare(scene: Phaser.Scene, cfg: LensFlareObject) {
 }
 
 export function loadObjects(scene: Phaser.Scene, list: ObjectsConfig) {
-    console.log('[ObjectLoader] Starting to load objects:', list.length, 'items');
+    logInfo('ObjectLoader', 'Starting to load objects', { itemCount: list.length }, 'loadObjects');
     
     // sort by z so z=0 background is created first (optional; setDepth also ensures order)
     const sorted = [...list].sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
     const made: Record<string, Phaser.GameObjects.GameObject> = {};
 
     for (const item of sorted) {
-        console.log('[ObjectLoader] Processing item:', item.type, item.id, item);
+        logDebug('ObjectLoader', 'Processing item', { type: item.type, id: item.id, item }, 'loadObjects');
         let obj: Phaser.GameObjects.GameObject | null = null;
         switch (item.type) {
             case 'container': {
@@ -424,9 +425,9 @@ export function loadObjects(scene: Phaser.Scene, list: ObjectsConfig) {
                 // Optional: build simple visual children (safe: no physics/FX here)
                 const children = anyItem.children as any[] | undefined;
                 if (children?.length) {
-                    console.log('[ObjectLoader] Container has children:', children.length, 'children');
+                    logDebug('ObjectLoader', 'Container has children', { childCount: children.length }, 'loadObjects');
                     for (const child of children) {
-                        console.log('[ObjectLoader] Processing child:', child.type, child.id);
+                        logDebug('ObjectLoader', 'Processing child', { type: child.type, id: child.id }, 'loadObjects');
                         let ch: Phaser.GameObjects.GameObject | null = null;
                                                  switch (child.type) {
                              case 'image': ch = createImage(scene, child); break;
@@ -437,16 +438,16 @@ export function loadObjects(scene: Phaser.Scene, list: ObjectsConfig) {
                              case 'button': ch = createButton(scene, child as ButtonObject); break;
                              case 'effect': ch = createEffect(scene, child as EffectObject); break;
                              default: 
-                                 console.warn('[ObjectLoader] Unknown child type:', child.type, child.id);
+                                 logWarn('ObjectLoader', 'Unknown child type', { type: child.type, id: child.id }, 'loadObjects');
                                  ch = null; // avoid physics/FX inside container by default
                          }
                         if (ch) {
-                            console.log('[ObjectLoader] Child created successfully:', child.type, child.id, ch);
+                            logDebug('ObjectLoader', 'Child created successfully', { type: child.type, id: child.id, child: ch }, 'loadObjects');
                             (ch as any).setPosition?.(child.x ?? 0, child.y ?? 0);
                             c.add(ch);
                             if (child.id) made[child.id] = ch;
                         } else {
-                            console.warn('[ObjectLoader] Failed to create child:', child.type, child.id);
+                            logWarn('ObjectLoader', 'Failed to create child', { type: child.type, id: child.id }, 'loadObjects');
                         }
                     }
                 }
@@ -473,9 +474,9 @@ export function loadObjects(scene: Phaser.Scene, list: ObjectsConfig) {
                 obj = createText(scene, item);
                 break;
             case 'button':
-                console.log('[ObjectLoader] Found button case for:', item.id);
+                logDebug('ObjectLoader', 'Found button case for', { id: item.id }, 'loadObjects');
                 obj = createButton(scene, item as ButtonObject);
-                console.log('[ObjectLoader] Button object created:', item.id, obj);
+                logDebug('ObjectLoader', 'Button object created', { id: item.id, obj }, 'loadObjects');
                 break;
             case 'leaves': {
                 const lo = item as LeavesObject;
@@ -506,23 +507,23 @@ export function loadObjects(scene: Phaser.Scene, list: ObjectsConfig) {
                 obj = createLensFlare(scene, item as LensFlareObject);
                 break;
             case 'effect':
-                console.log('[ObjectLoader] Found effect case for:', item.id, item);
+                logDebug('ObjectLoader', 'Found effect case for', { id: item.id, item }, 'loadObjects');
                 obj = createEffect(scene, item as EffectObject);
-                console.log('[ObjectLoader] Effect object created:', item.id, obj);
+                logDebug('ObjectLoader', 'Effect object created', { id: item.id, obj }, 'loadObjects');
                 break;
 
             default:
-                console.warn('[ObjectLoader] Unknown type', (item as any).type);
+                logWarn('ObjectLoader', 'Unknown type', { type: (item as any).type }, 'loadObjects');
         }
         if (obj && item.id) {
             made[item.id] = obj;
-            console.log('[ObjectLoader] Stored object in made:', item.id, obj);
+            logDebug('ObjectLoader', 'Stored object in made', { id: item.id, obj }, 'loadObjects');
         } else if (item.id) {
-            console.warn('[ObjectLoader] Failed to create or store object:', item.id, item.type);
+            logWarn('ObjectLoader', 'Failed to create or store object', { id: item.id, type: item.type }, 'loadObjects');
         }
     }
 
-    console.log('[ObjectLoader] Final objects created:', Object.keys(made));
-    console.log('[ObjectLoader] Made object details:', made);
+    logInfo('ObjectLoader', 'Final objects created', { objectKeys: Object.keys(made), objectCount: Object.keys(made).length }, 'loadObjects');
+    logDebug('ObjectLoader', 'Made object details', made, 'loadObjects');
     return made;
 }

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import type { SunObject } from '../objects/types';
+import { logDebug } from '../core/Logger';
 
 type Opts = NonNullable<SunObject['options']>;
 
@@ -236,7 +237,7 @@ export class SunBody {
 
         // console line (for deeper digging)
         // eslint-disable-next-line no-console
-        console.debug('[SUN·SPACKLE]', {
+        logDebug('Sun', 'spackle', {
             world: { x: wx, y: wy },
             local: { x: spot.x, y: spot.y },
             requestSize: info.size,

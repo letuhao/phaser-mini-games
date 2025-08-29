@@ -1,6 +1,8 @@
 import type { ObjectsConfig, RectObject, TextObject, ButtonObject } from '../objects/types';
 
 // Single background object that scales with the canvas while maintaining 16:9 aspect ratio
+import { logInfo } from '../core/Logger';
+
 export const LevisR3Objects: ObjectsConfig = [
     {
         type: 'background',
@@ -129,7 +131,7 @@ export const LevisR3Objects: ObjectsConfig = [
                 
                 // Click action - open Facebook
                 onClick: () => { 
-                    console.log('Facebook button clicked!');
+                    logInfo('SocialButton', 'Facebook button clicked', undefined, 'onClick');
                     window.open('https://www.facebook.com', '_blank');
                 },
             } as ButtonObject,
@@ -159,7 +161,7 @@ export const LevisR3Objects: ObjectsConfig = [
                 
                 // Click action - open Instagram
                 onClick: () => { 
-                    console.log('Instagram button clicked!');
+                    logInfo('SocialButton', 'Instagram button clicked', undefined, 'onClick');
                     window.open('https://www.instagram.com', '_blank');
                 },
             } as ButtonObject,
@@ -189,7 +191,7 @@ export const LevisR3Objects: ObjectsConfig = [
                 
                 // Click action - open YouTube
                 onClick: () => { 
-                    console.log('YouTube button clicked!');
+                    logInfo('SocialButton', 'YouTube button clicked', undefined, 'onClick');
                     window.open('https://www.youtube.com', '_blank');
                 },
             } as ButtonObject,
@@ -219,7 +221,7 @@ export const LevisR3Objects: ObjectsConfig = [
                 
                 // Click action - open Zalo
                 onClick: () => { 
-                    console.log('Zalo button clicked!');
+                    logInfo('SocialButton', 'Zalo button clicked', undefined, 'onClick');
                     window.open('https://zalo.me', '_blank');
                 },
             } as ButtonObject,
@@ -249,7 +251,7 @@ export const LevisR3Objects: ObjectsConfig = [
                 
                 // Click action - open TikTok
                 onClick: () => { 
-                    console.log('TikTok button clicked!');
+                    logInfo('SocialButton', 'TikTok button clicked', undefined, 'onClick');
                     window.open('https://www.tiktok.com', '_blank');
                 },
             } as ButtonObject,

@@ -47,7 +47,7 @@ export class Logger {
     /**
      * Format log message with optional object data
      */
-    private formatMessage(objectName: string, level: LogLevel, message: string, data?: any): string {
+    private formatMessage(objectName: string, level: LogLevel, message: string, data?: any, methodName?: string): string {
         const parts: string[] = [];
         
         // Add timestamp
@@ -65,6 +65,11 @@ export class Logger {
         // Add object name
         if (this.config.formatOptions.showObjectName) {
             parts.push(`[${objectName}]`);
+        }
+        
+        // Add method name if provided
+        if (methodName) {
+            parts.push(`[${methodName}]`);
         }
         
         // Add message
@@ -117,61 +122,61 @@ export class Logger {
         }
     }
     
-    /**
+        /**
      * Log error message
      */
-    public error(objectName: string, message: string, data?: any): void {
+    public error(objectName: string, message: string, data?: any, methodName?: string): void {
         if (this.shouldLog(objectName, LogLevel.ERROR)) {
-            const formattedMessage = this.formatMessage(objectName, LogLevel.ERROR, message, data);
+            const formattedMessage = this.formatMessage(objectName, LogLevel.ERROR, message, data, methodName);
             this.outputToConsole(formattedMessage, LogLevel.ERROR);
         }
     }
-    
+
     /**
      * Log warning message
      */
-    public warn(objectName: string, message: string, data?: any): void {
+    public warn(objectName: string, message: string, data?: any, methodName?: string): void {
         if (this.shouldLog(objectName, LogLevel.WARN)) {
-            const formattedMessage = this.formatMessage(objectName, LogLevel.WARN, message, data);
+            const formattedMessage = this.formatMessage(objectName, LogLevel.WARN, message, data, methodName);
             this.outputToConsole(formattedMessage, LogLevel.WARN);
         }
     }
-    
+
     /**
      * Log info message
      */
-    public info(objectName: string, message: string, data?: any): void {
+    public info(objectName: string, message: string, data?: any, methodName?: string): void {
         if (this.shouldLog(objectName, LogLevel.INFO)) {
-            const formattedMessage = this.formatMessage(objectName, LogLevel.INFO, message, data);
+            const formattedMessage = this.formatMessage(objectName, LogLevel.INFO, message, data, methodName);
             this.outputToConsole(formattedMessage, LogLevel.INFO);
         }
     }
-    
+
     /**
      * Log debug message
      */
-    public debug(objectName: string, message: string, data?: any): void {
+    public debug(objectName: string, message: string, data?: any, methodName?: string): void {
         if (this.shouldLog(objectName, LogLevel.DEBUG)) {
-            const formattedMessage = this.formatMessage(objectName, LogLevel.DEBUG, message, data);
+            const formattedMessage = this.formatMessage(objectName, LogLevel.DEBUG, message, data, methodName);
             this.outputToConsole(formattedMessage, LogLevel.DEBUG);
         }
     }
-    
+
     /**
      * Log trace message
      */
-    public trace(objectName: string, message: string, data?: any): void {
+    public trace(objectName: string, message: string, data?: any, methodName?: string): void {
         if (this.shouldLog(objectName, LogLevel.TRACE)) {
-            const formattedMessage = this.formatMessage(objectName, LogLevel.TRACE, message, data);
+            const formattedMessage = this.formatMessage(objectName, LogLevel.TRACE, message, data, methodName);
             this.outputToConsole(formattedMessage, LogLevel.TRACE);
         }
     }
-    
+
     /**
      * Convenience method for logging with current timestamp
      */
-    public log(objectName: string, message: string, data?: any): void {
-        this.info(objectName, message, data);
+    public log(objectName: string, message: string, data?: any, methodName?: string): void {
+        this.info(objectName, message, data, methodName);
     }
     
     /**
@@ -227,9 +232,9 @@ export class Logger {
 export const logger = Logger.getInstance();
 
 // Export convenience methods for direct usage
-export const logError = (objectName: string, message: string, data?: any) => logger.error(objectName, message, data);
-export const logWarn = (objectName: string, message: string, data?: any) => logger.warn(objectName, message, data);
-export const logInfo = (objectName: string, message: string, data?: any) => logger.info(objectName, message, data);
-export const logDebug = (objectName: string, message: string, data?: any) => logger.debug(objectName, message, data);
-export const logTrace = (objectName: string, message: string, data?: any) => logger.trace(objectName, message, data);
-export const log = (objectName: string, message: string, data?: any) => logger.log(objectName, message, data);
+export const logError = (objectName: string, message: string, data?: any, methodName?: string) => logger.error(objectName, message, data, methodName);
+export const logWarn = (objectName: string, message: string, data?: any, methodName?: string) => logger.warn(objectName, message, data, methodName);
+export const logInfo = (objectName: string, message: string, data?: any, methodName?: string) => logger.info(objectName, message, data, methodName);
+export const logDebug = (objectName: string, message: string, data?: any, methodName?: string) => logger.debug(objectName, message, data, methodName);
+export const logTrace = (objectName: string, message: string, data?: any, methodName?: string) => logger.trace(objectName, message, data, methodName);
+export const log = (objectName: string, message: string, data?: any, methodName?: string) => logger.log(objectName, message, data, methodName);

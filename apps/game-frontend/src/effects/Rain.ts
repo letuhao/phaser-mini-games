@@ -1,5 +1,6 @@
 // apps/game-frontend/src/effects/Rain.ts
 import Phaser from 'phaser';
+import { logDebug } from '../core/Logger';
 
 type Drop = Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
 
@@ -386,7 +387,7 @@ export class RainSystem {
 
         if (this.dbg.enabled && this.drops.length <= 3) {
             const b = drop.body as Phaser.Physics.Arcade.Body;
-            console.debug('[RAIN] spawn', {
+            logDebug('Rain', 'spawn', {
                 x: drop.x, y: drop.y,
                 gY: this.opts.gravityY,
                 vY0: b.velocity.y

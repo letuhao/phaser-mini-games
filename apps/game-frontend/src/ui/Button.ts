@@ -1,5 +1,6 @@
 // apps/game-frontend/src/ui/Button.ts
 import Phaser from 'phaser';
+import { logInfo, logDebug, logError, logWarn } from '../core/Logger';
 
 export type ButtonShape = 'rectangle' | 'circle';
 export type ButtonDisplayMode = 'text' | 'icon' | 'both';
@@ -59,14 +60,16 @@ export class UIButton {
         this.root = scene.add.container(opts.x || 0, opts.y || 0);
         
         // Create background (circle or with image)
-        console.log('[Button] Constructor - backgroundImage:', opts.backgroundImage);
-        console.log('[Button] Constructor - texture exists:', opts.backgroundImage ? scene.textures.exists(opts.backgroundImage) : 'no image');
+        logDebug('Button', 'Constructor - backgroundImage', { backgroundImage: opts.backgroundImage }, 'constructor');
+        logDebug('Button', 'Constructor - texture exists', { 
+            exists: opts.backgroundImage ? scene.textures.exists(opts.backgroundImage) : 'no image' 
+        }, 'constructor');
         
         if (opts.backgroundImage && scene.textures.exists(opts.backgroundImage)) {
-            console.log('[Button] Creating background with image');
+            logDebug('Button', 'Creating background with image', undefined, 'constructor');
             this.createBackgroundWithImage(scene);
         } else {
-            console.log('[Button] Creating simple circle background');
+            logDebug('Button', 'Creating simple circle background', undefined, 'constructor');
             this.createSimpleCircle(scene);
         }
         
@@ -115,12 +118,12 @@ export class UIButton {
         
         if (!backgroundImage) return;
         
-        console.log('[Button] Creating background with image:', backgroundImage);
-        console.log('[Button] Texture exists:', scene.textures.exists(backgroundImage));
+        logDebug('Button', 'Creating background with image', { backgroundImage }, 'createBackgroundWithImage');
+        logDebug('Button', 'Texture exists', { exists: scene.textures.exists(backgroundImage) }, 'createBackgroundWithImage');
         
         // Check if texture exists and has valid dimensions
         if (!scene.textures.exists(backgroundImage)) {
-            console.warn('[Button] Texture not found:', backgroundImage);
+            logWarn('Button', 'Texture not found', { backgroundImage }, 'createBackgroundWithImage');
             return;
         }
         
@@ -130,17 +133,17 @@ export class UIButton {
             
             // Check if image was created successfully
             if (!this.backgroundImage || !this.backgroundImage.texture) {
-                console.error('[Button] Failed to create image for texture:', backgroundImage);
+                logError('Button', 'Failed to create image for texture', { backgroundImage }, 'createBackgroundWithImage');
                 return;
             }
             
-            console.log('[Button] Image created successfully:', {
+            logDebug('Button', 'Image created successfully', {
                 texture: backgroundImage,
                 width: this.backgroundImage.width,
                 height: this.backgroundImage.height,
                 displayWidth: this.backgroundImage.displayWidth,
                 displayHeight: this.backgroundImage.displayHeight
-            });
+            }, 'createBackgroundWithImage');
             
             // Set origin based on config or default to center
             const origin = backgroundImageOrigin || { x: 0.5, y: 0.5 };
@@ -156,7 +159,7 @@ export class UIButton {
                 const scaleY = height / imgHeight;
                 const scale = Math.min(scaleX, scaleY);
                 this.backgroundImage.setScale(scale);
-                console.log('[Button] Scaled with fit mode:', { scale, imgWidth, imgHeight, buttonWidth: width, buttonHeight: height });
+                logDebug('Button', 'Scaled with fit mode', { scale, imgWidth, imgHeight, buttonWidth: width, buttonHeight: height }, 'createBackgroundWithImage');
             } else if (scaleMode === 'fill') {
                 // Scale to fill button bounds while maintaining aspect ratio
                 const imgWidth = this.backgroundImage.width;
@@ -165,18 +168,18 @@ export class UIButton {
                 const scaleY = height / imgHeight;
                 const scale = Math.max(scaleX, scaleY);
                 this.backgroundImage.setScale(scale);
-                console.log('[Button] Scaled with fill mode:', { scale, imgWidth, imgHeight, buttonWidth: width, buttonHeight: height });
+                logDebug('Button', 'Scaled with fill mode', { scale, imgWidth, imgHeight, buttonWidth: width, buttonHeight: height }, 'createBackgroundWithImage');
             } else if (scaleMode === 'stretch') {
                 // Stretch to exactly match button bounds
                 this.backgroundImage.setDisplaySize(width, height);
-                console.log('[Button] Scaled with stretch mode:', { buttonWidth: width, buttonHeight: height });
+                logDebug('Button', 'Scaled with stretch mode', { buttonWidth: width, buttonHeight: height }, 'createBackgroundWithImage');
             }
             
             this.root.add(this.backgroundImage);
-            console.log('[Button] Background image added to button successfully');
+            logDebug('Button', 'Background image added to button successfully', undefined, 'createBackgroundWithImage');
             
         } catch (error) {
-            console.error('[Button] Error creating background image:', error);
+            logError('Button', 'Error creating background image', { error }, 'createBackgroundWithImage');
             // Fallback to solid color background
             this.createSimpleCircle(scene);
         }
@@ -279,7 +282,7 @@ export class UIButton {
             try {
                 await onClick();
             } catch (error) {
-                console.error('Button click error:', error);
+                logError('Button', 'Button click error', { error }, 'onClick');
             }
         });
     }

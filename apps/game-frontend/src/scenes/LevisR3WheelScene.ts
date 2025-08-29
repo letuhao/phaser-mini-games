@@ -3,6 +3,7 @@ import { LevisR3Objects } from '../config/objects.levisR3';
 import { LevisR3Responsive } from '../config/responsive.levisR3';
 import { ResponsiveManager } from '../core/ResponsiveManager';
 import { ensureBasicTextures } from '../util/ensureBasicTextures';
+import { logInfo, logDebug, logError, logWarn } from '../core/Logger';
 
 export class LevisR3WheelScene extends Phaser.Scene {
     private objects!: Record<string, Phaser.GameObjects.GameObject>;
@@ -23,19 +24,23 @@ export class LevisR3WheelScene extends Phaser.Scene {
     }
 
     create() {
-        console.log('[Scene] Starting scene creation...');
+        logInfo('LevisR3WheelScene', 'Starting scene creation', undefined, 'create');
         
         // 1) Make sure textures referenced by object config exist
         ensureBasicTextures(this);
 
         // 2) Build scene graph using ObjectLoader + config
-        console.log('[Scene] Loading objects from config...');
+        logDebug('LevisR3WheelScene', 'Loading objects from config', undefined, 'create');
         this.objects = loadObjects(this, LevisR3Objects);
-        console.log('[Scene] Objects loaded:', Object.keys(this.objects));
-        console.log('[Scene] All objects details:', this.objects);
-        console.log('[Scene] Footer object:', this.objects['footer']);
-        console.log('[Scene] Effects container object:', this.objects['effects-container']);
-        console.log('[Scene] Embers effect object:', this.objects['embers-effect']);
+        logInfo('LevisR3WheelScene', 'Objects loaded', { 
+            objectKeys: Object.keys(this.objects),
+            objectCount: Object.keys(this.objects).length
+        }, 'create');
+        logDebug('LevisR3WheelScene', 'Key objects loaded', {
+            footer: !!this.objects['footer'],
+            effectsContainer: !!this.objects['effects-container'],
+            embersEffect: !!this.objects['embers-effect']
+        }, 'create');
         
         // 3) Hook responsive manager
         this.responsive = new ResponsiveManager(this, this.objects, LevisR3Responsive);
@@ -52,20 +57,22 @@ export class LevisR3WheelScene extends Phaser.Scene {
         // 6) Ensure footer text quality
         this.ensureFooterTextQuality();
         
-        console.log('[Scene] Scene creation completed');
+        logInfo('LevisR3WheelScene', 'Scene creation completed', undefined, 'create');
     }
 
     private positionFooter() {
-        console.log('[Scene] Positioning footer...');
+        logDebug('LevisR3WheelScene', 'Positioning footer', undefined, 'positionFooter');
         const background = this.objects['bg'] as any;
         const footer = this.objects['footer'] as Phaser.GameObjects.Container;
         
-        console.log('[Scene] Background object:', background);
-        console.log('[Scene] Footer object:', footer);
-        console.log('[Scene] Background has getBackgroundBounds:', !!background?.getBackgroundBounds);
+        logDebug('LevisR3WheelScene', 'Footer positioning objects', {
+            background: !!background,
+            footer: !!footer,
+            hasGetBackgroundBounds: !!background?.getBackgroundBounds
+        }, 'positionFooter');
         
         if (!background?.getBackgroundBounds || !footer) {
-            console.warn('[Scene] Cannot position footer - missing background bounds or footer');
+            logWarn('LevisR3WheelScene', 'Cannot position footer - missing background bounds or footer', undefined, 'positionFooter');
             return;
         }
         
@@ -84,7 +91,7 @@ export class LevisR3WheelScene extends Phaser.Scene {
                 footer.setScale(scaleX, scaleY);
                 
                 // Log current dimensions for debugging
-                console.log('Footer scaling:', {
+                logDebug('LevisR3WheelScene', 'Footer scaling applied', {
                     backgroundWidth: bgBounds.width,
                     backgroundHeight: bgBounds.height,
                     footerScale: scaleX,
@@ -92,7 +99,7 @@ export class LevisR3WheelScene extends Phaser.Scene {
                     footerHeight: footerConfig.baseHeight * scaleX,
                     textSize: footerConfig.textSize * scaleX,
                     uniformScale: scaleX === scaleY ? '✅' : '❌'
-                });
+                }, 'positionFooter');
             } else {
                 // Fallback to manual scaling
                 const scaleX = bgBounds.width / 2560;
@@ -108,16 +115,18 @@ export class LevisR3WheelScene extends Phaser.Scene {
     }
 
     private positionEffectsContainer() {
-        console.log('[Scene] Positioning effects container...');
+        logDebug('LevisR3WheelScene', 'Positioning effects container', undefined, 'positionEffectsContainer');
         const background = this.objects['bg'] as any;
         const effectsContainer = this.objects['effects-container'] as Phaser.GameObjects.Container;
         
-        console.log('[Scene] Background object:', background);
-        console.log('[Scene] Effects container object:', effectsContainer);
-        console.log('[Scene] Background has getBackgroundBounds:', !!background?.getBackgroundBounds);
+        logDebug('LevisR3WheelScene', 'Effects container positioning objects', {
+            background: !!background,
+            effectsContainer: !!effectsContainer,
+            hasGetBackgroundBounds: !!background?.getBackgroundBounds
+        }, 'positionEffectsContainer');
         
         if (!background?.getBackgroundBounds || !effectsContainer) {
-            console.warn('[Scene] Cannot position effects container - missing background bounds or effects container');
+            logWarn('LevisR3WheelScene', 'Cannot position effects container - missing background bounds or effects container', undefined, 'positionEffectsContainer');
             return;
         }
         
@@ -139,19 +148,19 @@ export class LevisR3WheelScene extends Phaser.Scene {
             
             // Update embers effect with container bounds if it exists
             const embersEffect = this.objects['embers-effect'] as any;
-            console.log('[Scene] Looking for embers effect:', {
+            logDebug('LevisR3WheelScene', 'Looking for embers effect', {
                 embersEffect: !!embersEffect,
                 hasEmbers: !!(embersEffect && embersEffect.__embers),
                 hasUpdateMethod: !!(embersEffect && embersEffect.__embers && embersEffect.__embers.updateContainerBounds)
-            });
+            }, 'positionEffectsContainer');
             
             if (embersEffect && embersEffect.__embers && embersEffect.__embers.updateContainerBounds) {
-                console.log('[Scene] Updating embers container bounds:', {
+                logDebug('LevisR3WheelScene', 'Updating embers container bounds', {
                     left: bgBounds.left,
                     top: bgBounds.top,
                     width: bgBounds.width,
                     height: bgBounds.height
-                });
+                }, 'positionEffectsContainer');
                 embersEffect.__embers.updateContainerBounds({
                     left: bgBounds.left,        // Use scaled background bounds (same as container)
                     top: bgBounds.top,          // Use scaled background bounds (same as container)
@@ -159,16 +168,16 @@ export class LevisR3WheelScene extends Phaser.Scene {
                     height: bgBounds.height     // Use scaled background height
                 });
             } else {
-                console.warn('[Scene] Cannot update embers bounds - missing effect or method');
+                logWarn('LevisR3WheelScene', 'Cannot update embers bounds - missing effect or method', undefined, 'positionEffectsContainer');
             }
             
-            console.log('Effects container positioned:', {
+            logDebug('LevisR3WheelScene', 'Effects container positioned', {
                 screenSize: { width: this.scale.width, height: this.scale.height },
                 scaledBackgroundBounds: { left: bgBounds.left, top: bgBounds.top, width: bgBounds.width, height: bgBounds.height },
                 calculatedScale: { x: scaleX, y: scaleX },
                 actualContainerPosition: { x: effectsContainer.x, y: effectsContainer.y },
                 actualContainerScale: effectsContainer.scale
-            });
+            }, 'positionEffectsContainer');
         };
         
         // Initial positioning
@@ -191,10 +200,10 @@ export class LevisR3WheelScene extends Phaser.Scene {
         // Force text to re-render with quality settings
         footerText.updateText();
         
-        console.log('Footer text quality ensured:', {
+        logDebug('LevisR3WheelScene', 'Footer text quality ensured', {
             textScale: footerText.scale,
             containerScale: footer.scale,
             textBounds: footerText.getBounds()
-        });
+        }, 'ensureFooterTextQuality');
     }
 }
