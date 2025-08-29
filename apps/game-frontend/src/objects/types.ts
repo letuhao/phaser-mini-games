@@ -237,6 +237,52 @@ export type EffectObject = BaseObject & {
     baseY?: number;                  // base Y position for spawning (legacy)
     budget?: number;                 // how many particles are active at once
     debugSpawnArea?: boolean;        // show spawn area rectangle for debugging
+    
+    // Embers-specific properties
+    embers?: {
+        // Size customization
+        scale?: {
+            min?: number;            // Minimum scale (0.1 - 2.0)
+            max?: number;            // Maximum scale (0.1 - 2.0)
+        };
+        
+        // Color customization
+        colors?: number[];           // Array of hex colors for embers
+        colorBlend?: boolean;        // Whether to blend between colors
+        
+        // Animation customization
+        rise?: {
+            min?: number;            // Minimum rise distance (px)
+            max?: number;            // Maximum rise distance (px)
+        };
+        duration?: {
+            min?: number;            // Minimum animation duration (ms)
+            max?: number;            // Maximum animation duration (ms)
+        };
+        sway?: {
+            min?: number;            // Minimum horizontal sway (px)
+            max?: number;            // Maximum horizontal sway (px)
+        };
+        
+        // Visual effects
+        alpha?: {
+            min?: number;            // Minimum alpha (0.0 - 1.0)
+            max?: number;            // Maximum alpha (0.0 - 1.0)
+        };
+        blendMode?: 'add' | 'screen' | 'multiply' | 'normal'; // Blend mode for embers
+        
+        // Physics simulation
+        gravity?: number;            // Gravity effect (negative = upward drift)
+        wind?: number;               // Wind effect (positive = rightward drift)
+        
+        // Texture customization
+        texture?: {
+            key?: string;            // Custom texture key
+            size?: number;           // Texture size (px)
+            shape?: 'circle' | 'square' | 'star' | 'diamond'; // Texture shape
+        };
+    };
+    
     // Additional effect-specific properties can be added here
 };
 

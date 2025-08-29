@@ -255,9 +255,23 @@ function createEffect(scene: Phaser.Scene, cfg: EffectObject) {
                     baseY: cfg.baseY ?? 600, // Legacy support
                     budget: cfg.budget,
                     debugSpawnArea: cfg.debugSpawnArea ?? false,
+                    
+                    // Enhanced customization options
+                    scale: cfg.embers?.scale,
+                    colors: cfg.embers?.colors,
+                    colorBlend: cfg.embers?.colorBlend,
+                    rise: cfg.embers?.rise,
+                    duration: cfg.embers?.duration,
+                    sway: cfg.embers?.sway,
+                    alpha: cfg.embers?.alpha,
+                    blendMode: cfg.embers?.blendMode,
+                    gravity: cfg.embers?.gravity,
+                    wind: cfg.embers?.wind,
+                    texture: cfg.embers?.texture,
+                    
                     // Container bounds will be set after creation via updateContainerBounds
                 };
-                logDebug('ObjectLoader', 'Creating Embers with options', opts, 'createEffect');
+                logDebug('ObjectLoader', 'Creating Embers with enhanced options', opts, 'createEffect');
                 effect = new Embers(scene, opts);
                 logDebug('ObjectLoader', 'Embers instance created', { effect }, 'createEffect');
                 break;

@@ -22,6 +22,23 @@ type Opts = {
     budget?: number;                 // how many embers are active at once
     containerBounds?: { left: number; top: number; width: number; height: number }; // container bounds for constraint checking
     debugSpawnArea?: boolean;        // show spawn area rectangle for debugging
+    
+    // Enhanced customization options
+    scale?: { min?: number; max?: number };           // Size customization
+    colors?: number[];                                // Array of hex colors for embers
+    colorBlend?: boolean;                             // Whether to blend between colors
+    rise?: { min?: number; max?: number };            // Rise distance customization
+    duration?: { min?: number; max?: number };        // Animation duration customization
+    sway?: { min?: number; max?: number };            // Horizontal sway customization
+    alpha?: { min?: number; max?: number };           // Alpha transparency customization
+    blendMode?: 'add' | 'screen' | 'multiply' | 'normal'; // Blend mode for embers
+    gravity?: number;                                 // Gravity effect (negative = upward drift)
+    wind?: number;                                    // Wind effect (positive = rightward drift)
+    texture?: {                                       // Texture customization
+        key?: string;                                 // Custom texture key
+        size?: number;                                // Texture size (px)
+        shape?: 'circle' | 'square' | 'star' | 'diamond'; // Texture shape
+    };
 };
 
 /**
@@ -38,6 +55,19 @@ export class Embers {
     private containerBounds?: { left: number; top: number; width: number; height: number };
     private debugSpawnArea: boolean;
     private debugRect?: Phaser.GameObjects.Rectangle;
+    
+    // Enhanced customization properties
+    private scaleRange: { min: number; max: number };
+    private colors: number[];
+    private colorBlend: boolean;
+    private riseRange: { min: number; max: number };
+    private durationRange: { min: number; max: number };
+    private swayRange: { min: number; max: number };
+    private alphaRange: { min: number; max: number };
+    private blendMode: Phaser.BlendModes;
+    private gravity: number;
+    private wind: number;
+    private textureConfig: { key: string; size: number; shape: string };
 
     constructor(scene: Phaser.Scene, opts: Opts = {}) {
         const pool = opts.count ?? 28;
@@ -47,21 +77,96 @@ export class Embers {
         this.initialBudget = opts.budget ?? 12; // Store initial budget for later use
         this.debugSpawnArea = opts.debugSpawnArea ?? false;
         
+        // Initialize enhanced customization properties with defaults
+        this.scaleRange = {
+            min: opts.scale?.min ?? 0.6,
+            max: opts.scale?.max ?? 1.0
+        };
+        this.colors = opts.colors ?? [0xffb15e, 0xff8c42, 0xff6b35]; // Default warm ember colors
+        this.colorBlend = opts.colorBlend ?? false;
+        this.riseRange = {
+            min: opts.rise?.min ?? 140,
+            max: opts.rise?.max ?? 280
+        };
+        this.durationRange = {
+            min: opts.duration?.min ?? 1500,
+            max: opts.duration?.max ?? 2600
+        };
+        this.swayRange = {
+            min: opts.sway?.min ?? -30,
+            max: opts.sway?.max ?? 30
+        };
+        this.alphaRange = {
+            min: opts.alpha?.min ?? 0.55,
+            max: opts.alpha?.max ?? 0.9
+        };
+        this.blendMode = this.getBlendMode(opts.blendMode ?? 'add');
+        this.gravity = opts.gravity ?? 0;
+        this.wind = opts.wind ?? 0;
+        this.textureConfig = {
+            key: opts.texture?.key ?? 'fx-ember',
+            size: opts.texture?.size ?? 12,
+            shape: opts.texture?.shape ?? 'circle'
+        };
+        
         logInfo('Embers', 'Constructor called with options', {
             pool,
             spawnArea: this.spawnArea,
             baseY: this.baseY,
             initialBudget: this.initialBudget,
-            containerBounds: this.containerBounds
+            containerBounds: this.containerBounds,
+            customization: {
+                scale: this.scaleRange,
+                colors: this.colors,
+                colorBlend: this.colorBlend,
+                rise: this.riseRange,
+                duration: this.durationRange,
+                sway: this.swayRange,
+                alpha: this.alphaRange,
+                blendMode: opts.blendMode,
+                gravity: this.gravity,
+                wind: this.wind,
+                texture: this.textureConfig
+            }
         }, 'constructor');
 
-        // ensure a small round texture exists
-        const key = 'fx-ember';
+        // ensure texture exists with custom shape and size
+        const key = this.textureConfig.key;
         if (!scene.textures.exists(key)) {
-            logDebug('Embers', 'Creating ember texture', { key }, 'constructor');
+            logDebug('Embers', 'Creating custom ember texture', { 
+                key, 
+                size: this.textureConfig.size, 
+                shape: this.textureConfig.shape 
+            }, 'constructor');
+            
             const g = scene.add.graphics();
-            g.fillStyle(0xffffff, 1).fillCircle(6, 6, 3);
-            g.generateTexture(key, 12, 12);
+            const center = this.textureConfig.size / 2;
+            const radius = this.textureConfig.size / 4;
+            
+            g.fillStyle(0xffffff, 1);
+            
+            switch (this.textureConfig.shape) {
+                case 'circle':
+                    g.fillCircle(center, center, radius);
+                    break;
+                case 'square':
+                    g.fillRect(center - radius, center - radius, radius * 2, radius * 2);
+                    break;
+                case 'star':
+                    this.drawStar(g, center, center, radius, 5);
+                    break;
+                case 'diamond':
+                    g.fillTriangle(
+                        center, center - radius,           // top
+                        center - radius, center,           // left
+                        center + radius, center            // right
+                    );
+                    break;
+                default:
+                    g.fillCircle(center, center, radius);
+            }
+            
+            g.generateTexture(key, this.textureConfig.size, this.textureConfig.size);
             g.destroy();
         } else {
             logDebug('Embers', 'Ember texture already exists', { key }, 'constructor');
@@ -93,7 +198,7 @@ export class Embers {
         logDebug('Embers', 'Building ember pool', { pool, emberCount: pool }, 'constructor');
         for (let i = 0; i < pool; i++) {
             const sp = scene.add.image(0, 0, key)
-                .setBlendMode(Phaser.BlendModes.ADD)
+                .setBlendMode(this.blendMode)
                 .setVisible(false);
             this.root.add(sp);
             this.sprites.push(sp);
@@ -104,6 +209,37 @@ export class Embers {
         // This prevents them from spawning at wrong positions initially
         logDebug('Embers', 'Waiting for container bounds before starting embers', undefined, 'constructor');
         this.activeCount = 0;
+    }
+
+    /** Convert blend mode string to Phaser blend mode */
+    private getBlendMode(mode: string): Phaser.BlendModes {
+        switch (mode) {
+            case 'add': return Phaser.BlendModes.ADD;
+            case 'screen': return Phaser.BlendModes.SCREEN;
+            case 'multiply': return Phaser.BlendModes.MULTIPLY;
+            case 'normal': return Phaser.BlendModes.NORMAL;
+            default: return Phaser.BlendModes.ADD;
+        }
+    }
+
+    /** Draw a star shape using graphics */
+    private drawStar(g: Phaser.GameObjects.Graphics, x: number, y: number, radius: number, points: number) {
+        const angleStep = (Math.PI * 2) / points;
+        const innerRadius = radius * 0.5;
+        
+        g.beginPath();
+        g.moveTo(x + radius, y);
+        
+        for (let i = 1; i <= points * 2; i++) {
+            const angle = i * angleStep / 2;
+            const r = i % 2 === 0 ? radius : innerRadius;
+            const px = x + Math.cos(angle) * r;
+            const py = y + Math.sin(angle) * r;
+            g.lineTo(px, py);
+        }
+        
+        g.closePath();
+        g.fillPath();
     }
 
     /** Update container bounds for constraint checking */
@@ -272,45 +408,60 @@ export class Embers {
             }, 'resetAndTween');
         }
 
-        const scaleStart = Phaser.Math.FloatBetween(0.6, 1.0);
+        const scaleStart = Phaser.Math.FloatBetween(this.scaleRange.min, this.scaleRange.max);
         const scaleEnd = scaleStart * 0.25;
-        const alphaStart = Phaser.Math.FloatBetween(0.55, 0.9);
-        const rise = Phaser.Math.Between(140, 280);
-        const dur = Phaser.Math.Between(1500, 2600);
-        const swayX = Phaser.Math.Between(-30, 30);
+        const alphaStart = Phaser.Math.FloatBetween(this.alphaRange.min, this.alphaRange.max);
+        const rise = Phaser.Math.Between(this.riseRange.min, this.riseRange.max);
+        const dur = Phaser.Math.Between(this.durationRange.min, this.durationRange.max);
+        const swayX = Phaser.Math.Between(this.swayRange.min, this.swayRange.max);
 
+        // Select color from the colors array
+        const colorIndex = this.colorBlend 
+            ? Math.floor(Math.random() * this.colors.length)
+            : 0;
+        const selectedColor = this.colors[colorIndex];
+        
         sp.setPosition(x, y)
             .setScale(scaleStart)
             .setAlpha(alphaStart)
-            .setTint(0xffb15e);
+            .setTint(selectedColor);
+
+        // Calculate final positions with physics effects
+        const finalY = y - rise + (this.gravity * dur / 1000); // Gravity effect over time
+        const finalX = x + swayX + (this.wind * dur / 1000);  // Wind effect over time
 
         logDebug('Embers', 'Ember positioned and styled', {
             position: { x, y },
-            scale: { start: scaleStart, end: scaleEnd },
-            alpha: alphaStart,
-            rise, dur, swayX
+            scale: { start: scaleStart, end: scaleEnd, range: this.scaleRange },
+            alpha: { start: alphaStart, range: this.alphaRange },
+            rise: { value: rise, range: this.riseRange },
+            duration: { value: dur, range: this.durationRange },
+            sway: { value: swayX, range: this.swayRange },
+            color: { selected: selectedColor, available: this.colors, blending: this.colorBlend },
+            physics: { gravity: this.gravity, wind: this.wind },
+            finalPosition: { x: finalX, y: finalY }
         }, 'resetAndTween');
-
-        // two tweens: Y rise + slight X sway + scale/alpha fade
+        
+        // Enhanced tween with physics: Y rise + X sway + scale/alpha fade + physics
         scene.tweens.add({
             targets: sp,
-            y: y - rise,
-            x: x + swayX,
+            y: finalY,
+            x: finalX,
             scale: scaleEnd,
             alpha: 0,
             ease: 'Cubic.easeOut',
             duration: dur,
-                            onComplete: () => {
-                    logDebug('Embers', 'Tween completed for sprite', sp, 'resetAndTween');
-                    // recycle only if still supposed to be active
-                    if (sp.visible) {
-                        logDebug('Embers', 'Recycling ember sprite', sp, 'resetAndTween');
-                        this.resetAndTween(sp);
-                    } else {
-                        logDebug('Embers', 'Sprite not visible, not recycling', sp, 'resetAndTween');
-                    }
+            onComplete: () => {
+                logDebug('Embers', 'Tween completed for sprite', sp, 'resetAndTween');
+                // recycle only if still supposed to be active
+                if (sp.visible) {
+                    logDebug('Embers', 'Recycling ember sprite', sp, 'resetAndTween');
+                    this.resetAndTween(sp);
+                } else {
+                    logDebug('Embers', 'Sprite not visible, not recycling', sp, 'resetAndTween');
                 }
-            });
+            }
+        });
             
             logDebug('Embers', 'Tween created for ember', sp, 'resetAndTween');
     }

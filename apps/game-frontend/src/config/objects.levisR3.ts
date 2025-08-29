@@ -34,27 +34,77 @@ export const LevisR3Objects: ObjectsConfig = [
                 alpha: 0.0,     // More visible for debugging - you can set this to 0 when done
                 origin: { x: 0, y: 0 }, // Top-left aligned
             } as RectObject,
-            // Ember effect - spawns within container bounds
+            // Enhanced Ember effect with customization options
             {
                 type: 'effect',
                 id: 'embers-effect',
                 effectType: 'embers',
                 x: 0,           // Relative to container (0 = left edge)
                 y: 0,           // Relative to container (0 = top edge)
-                // Ember configuration - NEW spawnArea system for precise positioning
-                // FIXED: Now using proper background-relative coordinates
-                // spawnArea coordinates are relative to the background image's (0,0) origin
-                // This ensures proper scaling across different screen sizes
-                // x: 0 = left edge of background image, y: 0 = top edge of background image
+                
+                // Basic configuration
                 count: 50,      // Number of embers in the pool
-                spawnArea: { 
-                    x: 0,              // Start from left edge of background image (0 = left edge)
-                    y: 1200,          // 200px from bottom (1440 - 200 = 1240)
-                    width: 2560,      // Full background image width
-                    height: 500       // 200px tall spawn area at bottom
-                },
                 budget: 50,     // How many embers are active at once
-                debugSpawnArea: false, // Show red rectangle for spawn area debugging - will help identify X position issues
+                debugSpawnArea: false, // Show red rectangle for spawn area debugging
+                
+                // Spawn area configuration
+                spawnArea: { 
+                    x: 0,              // Start from left edge of background image
+                    y: 1200,           // 200px from bottom (1440 - 200 = 1240)
+                    width: 2560,       // Full background image width
+                    height: 500        // 200px tall spawn area at bottom
+                },
+                
+                // Enhanced customization options
+                embers: {
+                    // Size customization
+                    scale: {
+                        min: 0.4,      // Smaller embers for variety
+                        max: 2.0       // Larger embers for impact
+                    },
+                    
+                    // Color customization - warm ember colors
+                    colors: [
+                        0xffb15e,      // Golden orange
+                        0xff8c42,      // Bright orange
+                        0xff6b35,      // Deep orange
+                        0xff4500,      // Red-orange
+                        0xffd700       // Gold
+                    ],
+                    colorBlend: true,  // Randomly select from colors
+                    
+                    // Animation customization
+                    rise: {
+                        min: 120,      // Minimum rise distance
+                        max: 320       // Maximum rise distance
+                    },
+                    duration: {
+                        min: 1200,     // Faster animations
+                        max: 3000      // Slower animations
+                    },
+                    sway: {
+                        min: -40,      // More horizontal movement
+                        max: 40        // More horizontal movement
+                    },
+                    
+                    // Visual effects
+                    alpha: {
+                        min: 0.6,      // More visible embers
+                        max: 0.95      // More visible embers
+                    },
+                    blendMode: 'add',  // Additive blending for glow effect
+                    
+                    // Physics simulation
+                    gravity: -0.5,     // Slight upward drift
+                    wind: 0.2,         // Gentle rightward drift
+                    
+                    // Texture customization
+                    texture: {
+                        key: 'fx-ember-custom',  // Custom texture key
+                        size: 16,                // Larger texture size
+                        shape: 'circle'          // Circle shape (options: circle, square, star, diamond)
+                    }
+                }
             } as any, // Type assertion for now
             // Add more effects here:
             // - Fireflies effect
