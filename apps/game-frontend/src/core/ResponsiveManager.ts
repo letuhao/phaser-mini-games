@@ -84,6 +84,9 @@ export class ResponsiveManager {
         const ids = new Set(Object.values(this.cfg.groups).flat());
         const all = ids.size ? [...ids] : Object.keys(this.objects);
         for (const id of all) {
+            // Skip footer objects to prevent text distortion
+            if (id === 'footer' || id === 'footer-bg' || id === 'footer-text') continue;
+            
             const go = this.objects[id];
             (go as any).setScale?.(k);
             const body = (go as any).body;

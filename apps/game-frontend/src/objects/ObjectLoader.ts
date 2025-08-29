@@ -94,7 +94,23 @@ function createBackground(scene: Phaser.Scene, cfg: BackgroundObject) {
             };
             applyFit();
             scene.scale.on('resize', applyFit);
+            
             o = img;
+            
+            // Add method to get background bounds
+            (o as any).getBackgroundBounds = () => {
+                const bounds = img.getBounds();
+                return {
+                    left: bounds.x,
+                    right: bounds.x + bounds.width,
+                    top: bounds.y,
+                    bottom: bounds.y + bounds.height,
+                    width: bounds.width,
+                    height: bounds.height,
+                    centerX: bounds.x + bounds.width / 2,
+                    centerY: bounds.y + bounds.height / 2
+                };
+            };
         }
     } else {
         // Solid fill using a full-screen rectangle

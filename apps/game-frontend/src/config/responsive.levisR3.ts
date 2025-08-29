@@ -2,7 +2,8 @@ import type { ResponsiveConfig } from '../core/ResponsiveManager';
 
 export const LevisR3Responsive: ResponsiveConfig = {
     groups: {
-        bg: ['bg']
+        bg: ['bg'],
+        footer: ['footer', 'footer-bg', 'footer-text']
     },
     fallbackScale: { min: 0.5, max: 1.1 },
     profiles: [
@@ -18,17 +19,17 @@ export const LevisR3Responsive: ResponsiveConfig = {
         },
         {
             name: 'md', priority: 30, condition: { width: { min: 768, max: 1023 } },
-            canvas: { width: 900, height: 506 }, // 16:9 aspect ratio (was 1600, causing distortion)
+            canvas: { width: 900, height: 506 }, // 16:9 aspect ratio
             layers: {}
         },
         {
             name: 'sm', priority: 40, condition: { width: { max: 767 }, aspect: { max: 0.75 } },
-            canvas: { width: 720, height: 405 }, // 16:9 aspect ratio (was 1280, causing distortion)
+            canvas: { width: 720, height: 405 }, // 16:9 aspect ratio
             layers: {}
         },
         {
             name: 'xs', priority: 50, condition: { width: { max: 360 } },
-            canvas: { width: 360, height: 202 }, // 16:9 aspect ratio (was 640, causing distortion)
+            canvas: { width: 360, height: 202 }, // 16:9 aspect ratio
             layers: {}
         },
     ]

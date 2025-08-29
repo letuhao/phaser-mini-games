@@ -2,6 +2,9 @@ import Phaser from 'phaser';
 import { AppConfig, CanvasMode } from './appConfig';
 import { LevisR3WheelScene } from './scenes/LevisR3WheelScene';
 
+// Make AppConfig globally available for footer auto-scaling
+(window as any).AppConfig = AppConfig;
+
 type Size = { width: number; height: number };
 
 function clampDpr(maxDpr: number) {
@@ -87,6 +90,8 @@ function makeGame(size: { width: number; height: number }) {
             premultipliedAlpha: false,                  // safer blending for UI over videos/images
             antialias: true,
             powerPreference: 'high-performance',
+            // Enhanced text quality
+            roundPixels: false, // Disable for smooth text
             // clearBeforeRender: true, // default; keep if you see smearing artifacts
         },
         pixelArt: false,
