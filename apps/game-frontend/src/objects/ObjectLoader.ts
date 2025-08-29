@@ -16,6 +16,7 @@ import {
     SunObject,
     LensFlareObject,
 } from './types';
+import { GroupNode } from '../core/GroupNode';
 import { AutumnLeaves } from '../effects/AutumnLeaves';
 import { RainSystem } from '../effects/Rain';
 import { WaterSurface } from '../effects/WaterSurface';
@@ -247,6 +248,56 @@ export function loadObjects(scene: Phaser.Scene, list: ObjectsConfig) {
     for (const item of sorted) {
         let obj: Phaser.GameObjects.GameObject | null = null;
         switch (item.type) {
+            case 'container': {
+                const c = new GroupNode(scene, item.x ?? 0, item.y ?? 0, item.id);
+                const sc = (item as any).scale;
+                if (typeof sc === 'number') {
+                    c.setScale(sc);
+                } else if (sc && typeof sc.x === 'number' && typeof sc.y === 'number') {
+                    c.setScale(sc.x, sc.y);
+                }
+                if (item.z != null) c.setDepth(item.z);
+                if (typeof item.visible === 'boolean') c.setVisible(item.visible);
+
+                // Hit area from config (optional)
+                const anyItem = item as any;
+                const ha = anyItem.hitArea as { kind?: string; width?: number; height?: number; originCenter?: boolean } | undefined;
+
+                if (ha?.kind === 'rect' && typeof ha.width === 'number' && typeof ha.height === 'number') {
+                    c.setHitRect(ha.width, ha.height, ha.originCenter ?? true);
+                    if (anyItem.interactive) c.setInteractive();
+                    if (anyItem.cursor === 'pointer') c.setCursor('pointer');
+                } else if (anyItem.interactive) {
+                    // fallback: if interactive but no rect provided, use current size if set
+                    if (!c.input?.hitArea && c.width && c.height) c.setHitRect(c.width, c.height, true);
+                    c.setInteractive();
+                    if (anyItem.cursor === 'pointer') c.setCursor('pointer');
+                }
+
+                // Optional: build simple visual children (safe: no physics/FX here)
+                const children = anyItem.children as any[] | undefined;
+                if (children?.length) {
+                    for (const child of children) {
+                        let ch: Phaser.GameObjects.GameObject | null = null;
+                        switch (child.type) {
+                            case 'image': ch = createImage(scene, child); break;
+                            case 'sprite': ch = createSprite(scene, child); break;
+                            case 'tileSprite': ch = createTileSprite(scene, child); break;
+                            case 'rect': ch = createRect(scene, child); break;
+                            case 'text': ch = createText(scene, child); break;
+                            default: ch = null; // avoid physics/FX inside container by default
+                        }
+                        if (ch) {
+                            (ch as any).setPosition?.(child.x ?? 0, child.y ?? 0);
+                            c.add(ch);
+                            if (child.id) made[child.id] = ch;
+                        }
+                    }
+                }
+
+                obj = c;
+                break;
+            }
             case 'background':
                 obj = createBackground(scene, item);
                 break;

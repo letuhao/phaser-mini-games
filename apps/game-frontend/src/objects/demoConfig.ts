@@ -17,73 +17,73 @@ export const DemoObjects: ObjectsConfig = [
         }
     },
 
-    {
-        id: 'leaves',
-        type: 'leaves',
-        z: 2,
-        options: {
-            count: 30,  // legacy; max fallback if spawn.max not set
-            spawn: {
-                max: 30,
-                startFilled: false,        // gradually fill
-                intervalMin: 0.05,
-                intervalMax: 0.20,
-                initialDelayMin: 0.0,
-                initialDelayMax: 0.5,
-                jitterX: 24,
-                jitterY: 40
-            },
-            physics: { mode: 'blend', kAir: 0.9, gravity: 30, terminalVy: 320 },
-            wind: {
-                mode: 'range',
-                range: { from: { x: 80, y: 6 }, to: { x: 180, y: 28 } },
-                sweep: { durMin: 1.2, durMax: 3.0, holdMin: 0.2, holdMax: 0.8, keepXMin: 50, jitterAmp: 10, jitterFreq: 1.1 }
-            },
-            flutter: { amp: 26, freq: 1.0 },
-            size: { min: 12, max: 28 }
-        }
-    },
+    // {
+    //     id: 'leaves',
+    //     type: 'leaves',
+    //     z: 2,
+    //     options: {
+    //         count: 30,  // legacy; max fallback if spawn.max not set
+    //         spawn: {
+    //             max: 30,
+    //             startFilled: false,        // gradually fill
+    //             intervalMin: 0.05,
+    //             intervalMax: 0.20,
+    //             initialDelayMin: 0.0,
+    //             initialDelayMax: 0.5,
+    //             jitterX: 24,
+    //             jitterY: 40
+    //         },
+    //         physics: { mode: 'blend', kAir: 0.9, gravity: 30, terminalVy: 320 },
+    //         wind: {
+    //             mode: 'range',
+    //             range: { from: { x: 80, y: 6 }, to: { x: 180, y: 28 } },
+    //             sweep: { durMin: 1.2, durMax: 3.0, holdMin: 0.2, holdMax: 0.8, keepXMin: 50, jitterAmp: 10, jitterFreq: 1.1 }
+    //         },
+    //         flutter: { amp: 26, freq: 1.0 },
+    //         size: { min: 12, max: 28 }
+    //     }
+    // },
 
     // Sun (circle motion)
-    {
-        id: 'sun-body', type: 'sun', z: 39, options: {
-            // 1) fixed top-left
-            pinTo: { corner: 'tl', offsetX: 28, offsetY: 24 },
+    // {
+    //     id: 'sun-body', type: 'sun', z: 39, options: {
+    //         // 1) fixed top-left
+    //         pinTo: { corner: 'tl', offsetX: 28, offsetY: 24 },
 
-            radius: 24, color: 0xfff3c6, glow: { radius: 56, alpha: 0.65, color: 0xffe8aa },
-            flicker: { amp: 0.03, freq: 0.25 },
+    //         radius: 24, color: 0xfff3c6, glow: { radius: 56, alpha: 0.65, color: 0xffe8aa },
+    //         flicker: { amp: 0.03, freq: 0.25 },
 
-            // 2) animated aura with irregular edges
-            aura: {
-                enabled: true,
-                rate: 0.6,
-                life: { min: 900, max: 1600 },
-                radius: { min: 1.08, max: 1.5 }, // × glow.radius
-                thickness: { min: 10, max: 18 },
-                edges: { min: 16, max: 44 },
-                jitter: 0.25,
-                color: 0xffdfbb,
-                alpha: { min: 0.18, max: 0.3 },
-                rotDegPerSec: { min: -8, max: 8 },
-                blend: 'add'
-            },
+    //         // 2) animated aura with irregular edges
+    //         aura: {
+    //             enabled: true,
+    //             rate: 0.6,
+    //             life: { min: 900, max: 1600 },
+    //             radius: { min: 1.08, max: 1.5 }, // × glow.radius
+    //             thickness: { min: 10, max: 18 },
+    //             edges: { min: 16, max: 44 },
+    //             jitter: 0.25,
+    //             color: 0xffdfbb,
+    //             alpha: { min: 0.18, max: 0.3 },
+    //             rotDegPerSec: { min: -8, max: 8 },
+    //             blend: 'add'
+    //         },
 
-            // 3) surface speckle (procedural, no texture needed)
-            spackle: {
-                enabled: true,
-                rate: 4,
-                maxAlive: 80,
-                size: { min: 10, max: 26 },
-                life: { min: 600, max: 1200 },
-                brightenChance: 1,
-                brightColor: 0xfffbe0,
-                alpha: { min: 0.55, max: 0.85 },
-                textureKey: 'sun-speckle1',
-                autoCenter: true,
-                clampToDisk: true
-            }
-        }
-    },
+    //         // 3) surface speckle (procedural, no texture needed)
+    //         spackle: {
+    //             enabled: true,
+    //             rate: 4,
+    //             maxAlive: 80,
+    //             size: { min: 10, max: 26 },
+    //             life: { min: 600, max: 1200 },
+    //             brightenChance: 1,
+    //             brightColor: 0xfffbe0,
+    //             alpha: { min: 0.55, max: 0.85 },
+    //             textureKey: 'sun-speckle1',
+    //             autoCenter: true,
+    //             clampToDisk: true
+    //         }
+    //     }
+    // },
 
     // Rays that follow the sun (from earlier)
     // {
@@ -102,14 +102,14 @@ export const DemoObjects: ObjectsConfig = [
     // },
 
     // Lens flare sourced from the sun
-    {
-        id: 'lens', type: 'lensflare', z: 55, options: {
-            sourceId: 'sun-body',
-            occluders: ['ground', 'water'],
-            alpha: 0.9,
-            distanceFalloff: 0.6
-        }
-    },
+    // {
+    //     id: 'lens', type: 'lensflare', z: 55, options: {
+    //         sourceId: 'sun-body',
+    //         occluders: ['ground', 'water'],
+    //         alpha: 0.9,
+    //         distanceFalloff: 0.6
+    //     }
+    // },
 
     // Rain (collide with water first, then ground fallback)
     {

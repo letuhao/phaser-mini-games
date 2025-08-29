@@ -1,6 +1,24 @@
+export type ObjectKind =
+    | 'background'
+    | 'image'
+    | 'sprite'
+    | 'tileSprite'
+    | 'rect'
+    | 'text'
+    | 'leaves'
+    | 'ground'
+    | 'rain'
+    | 'water'
+    | 'sunrays'
+    | 'sun'
+    | 'lensflare'
+    | 'container';
+
+export type RectHitArea = { kind: 'rect'; width: number; height: number; originCenter?: boolean };
+
 export type BaseObject = {
     id?: string;
-    type: 'background' | 'image' | 'sprite' | 'tileSprite' | 'rect' | 'text' | 'leaves' | 'ground' | 'rain' | 'water' | 'sunrays' | 'sun' | 'lensflare';
+    type: ObjectKind;
     x?: number;
     y?: number;
     z?: number;          // display depth (Phaser's z-order)
@@ -9,7 +27,16 @@ export type BaseObject = {
     alpha?: number;
     scale?: number | { x: number; y: number };
     visible?: boolean;
+    props?: Record<string, any>;
 };
+
+export interface ContainerObject extends BaseObject {
+    type: 'container';
+    children?: BaseObject[];  // allow nested visuals
+    hitArea?: RectHitArea;    // 👈 optional group-level input from config
+    interactive?: boolean;    // quick flag: enable interaction if hitArea provided
+    cursor?: 'pointer' | 'default';
+}
 
 export type BackgroundObject = BaseObject & {
     type: 'background';
@@ -181,6 +208,7 @@ export type SceneObject =
     | SunRaysObject
     | SunObject
     | LensFlareObject
+    | ContainerObject
     ;
 
 export type ObjectsConfig = SceneObject[];
