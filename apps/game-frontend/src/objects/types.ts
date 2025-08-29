@@ -101,7 +101,12 @@ export type SunObject = BaseObject & {
 
         // Motion
         mode?: 'static' | 'linear' | 'circle';
+
+        // NEW: pin sun to a screen corner (overrides mode if set)
+        pinTo?: { corner: 'tl' | 'tr' | 'bl' | 'br'; offsetX?: number; offsetY?: number };
+
         static?: { x: number; y: number }; // used when mode:'static'
+
         linear?: {
             from: { x: number; y: number };
             to: { x: number; y: number };
@@ -110,6 +115,7 @@ export type SunObject = BaseObject & {
             repeat?: -1 | number;
             ease?: string;     // Phaser ease name
         };
+
         circle?: {
             cx: number; cy: number; r: number;
             angularSpeedDeg?: number; // deg/s (+ clockwise)
@@ -118,6 +124,41 @@ export type SunObject = BaseObject & {
         };
 
         flicker?: { amp?: number; freq?: number }; // subtle brightness flicker
+
+        // NEW: animated AURA ring
+        aura?: {
+            enabled?: boolean;
+            rate?: number;                   // spawns/sec
+            life?: { min: number; max: number };
+            radius?: { min: number; max: number }; // base outer radius (px), ~around glow
+            thickness?: { min: number; max: number };
+            edges?: { min: number; max: number };   // polygon vertices
+            jitter?: number;                 // 0..1 radial wobble
+            color?: number;
+            alpha?: { min: number; max: number };
+            rotDegPerSec?: { min: number; max: number };
+            blend?: 'add' | 'screen';
+        };
+
+        // NEW: surface speckle
+        spackle?: {
+            enabled?: boolean;
+            rate?: number;
+            maxAlive?: number;
+            size?: { min: number; max: number };
+            life?: { min: number; max: number };
+            brightenChance?: number;
+            brightColor?: number;
+            darkColor?: number;
+            alpha?: { min: number; max: number };
+            textureKey?: string;
+
+            // NEW:
+            autoCenter?: boolean;                 // default true
+            contentOffset?: { x: number; y: number }; // manual px override (after scaling)
+            clampToDisk?: boolean;                // default true (cap to 2*radius)
+            textureKeys?: string[];               // if you want a pool of textures
+        };
     };
 };
 

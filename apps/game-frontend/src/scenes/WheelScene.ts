@@ -8,10 +8,12 @@ export class WheelScene extends Phaser.Scene {
   constructor() { super('Wheel'); }
 
   preload() {
-    // TODO: replace with real assets
-    // this.load.image('bgTexture', '/public/bg.jpg');
-    this.load.image('wheel', 'wheel.png');      // put placeholder in /public or adjust path
-    this.load.image('pointer', 'pointer.png');
+    this.load.setPath('/');
+
+    this.load.image(
+      'sun-speckle1',
+      'assets/textures/sun-speckles/speckle1.png'
+    );
   }
 
   create() {

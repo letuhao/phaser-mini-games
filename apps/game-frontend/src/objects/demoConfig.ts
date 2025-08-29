@@ -47,28 +47,59 @@ export const DemoObjects: ObjectsConfig = [
     // Sun (circle motion)
     {
         id: 'sun-body', type: 'sun', z: 39, options: {
-            mode: 'circle',
-            circle: { cx: 220, cy: 80, r: 120, angularSpeedDeg: 6, phaseDeg: -20, clockwise: true },
-            radius: 20, color: 0xfff3c6, glow: { radius: 48, alpha: 0.65, color: 0xffe8aa },
-            flicker: { amp: 0.03, freq: 0.25 }
+            // 1) fixed top-left
+            pinTo: { corner: 'tl', offsetX: 28, offsetY: 24 },
+
+            radius: 24, color: 0xfff3c6, glow: { radius: 56, alpha: 0.65, color: 0xffe8aa },
+            flicker: { amp: 0.03, freq: 0.25 },
+
+            // 2) animated aura with irregular edges
+            aura: {
+                enabled: true,
+                rate: 0.6,
+                life: { min: 900, max: 1600 },
+                radius: { min: 1.08, max: 1.5 }, // × glow.radius
+                thickness: { min: 10, max: 18 },
+                edges: { min: 16, max: 44 },
+                jitter: 0.25,
+                color: 0xffdfbb,
+                alpha: { min: 0.18, max: 0.3 },
+                rotDegPerSec: { min: -8, max: 8 },
+                blend: 'add'
+            },
+
+            // 3) surface speckle (procedural, no texture needed)
+            spackle: {
+                enabled: true,
+                rate: 4,
+                maxAlive: 80,
+                size: { min: 10, max: 26 },
+                life: { min: 600, max: 1200 },
+                brightenChance: 1,
+                brightColor: 0xfffbe0,
+                alpha: { min: 0.55, max: 0.85 },
+                textureKey: 'sun-speckle1',
+                autoCenter: true,
+                clampToDisk: true
+            }
         }
     },
 
     // Rays that follow the sun (from earlier)
-    {
-        id: 'sunrays', type: 'sunrays', z: 40, options: {
-            source: { x: 0, y: 0 },
-            motion: { mode: 'follow', sourceId: 'sun-body', rotateSpeedDeg: 0, jitter: { ampDeg: 0.8, freq: 0.12 } },
-            occluders: ['ground', 'water'],
-            gradient: {
-                layers: 6, stops: [
-                    { at: 0.0, color: 0xfffbf0, alpha: 0.9 },
-                    { at: 0.5, color: 0xffe8b2, alpha: 0.7 },
-                    { at: 1.0, color: 0xf4c677, alpha: 0.5 },
-                ]
-            }
-        }
-    },
+    // {
+    //     id: 'sunrays', type: 'sunrays', z: 40, options: {
+    //         source: { x: 0, y: 0 },
+    //         motion: { mode: 'follow', sourceId: 'sun-body', rotateSpeedDeg: 0, jitter: { ampDeg: 0.8, freq: 0.12 } },
+    //         occluders: ['ground', 'water'],
+    //         gradient: {
+    //             layers: 6, stops: [
+    //                 { at: 0.0, color: 0xfffbf0, alpha: 0.9 },
+    //                 { at: 0.5, color: 0xffe8b2, alpha: 0.7 },
+    //                 { at: 1.0, color: 0xf4c677, alpha: 0.5 },
+    //             ]
+    //         }
+    //     }
+    // },
 
     // Lens flare sourced from the sun
     {
@@ -136,52 +167,6 @@ export const DemoObjects: ObjectsConfig = [
             }
         }
     },
-
-    //A) Default (fixed), just a nicer gradient
-    // {
-    //     id: 'sun', type: 'sunrays', z: 40, options: {
-    //         source: { x: 140, y: 90 },
-    //         rays: 12, spreadDeg: 36, length: 1400,
-    //         thickness: { min: 60, max: 160, profile: 'center-heavy' },
-    //         gradient: {
-    //             layers: 7, stops: [
-    //                 { at: 0.00, color: 0xfff7da, alpha: 0.9 },
-    //                 { at: 0.40, color: 0xffe7b3, alpha: 0.75 },
-    //                 { at: 1.00, color: 0xf1c27d, alpha: 0.45 },
-    //             ]
-    //         },
-    //         motion: { mode: 'fixed' },            // default
-    //         dimming: { enabled: false }           // default
-    //     }
-    // },
-
-    // {
-    //     id: 'sun', type: 'sunrays', z: 40, options: {
-    //         source: { x: 20, y: 20 },               // ignored when following
-    //         rays: 20, spreadDeg: 45, length: 2000,
-    //         thickness: { min: 50, max: 150, profile: 'center-heavy' },
-    //         lengthJitter: 0.2,
-    //         gradient: {
-    //             layers: 6, stops: [
-    //                 { at: 0.0, color: 0xfffbf0, alpha: 0.9 },
-    //                 { at: 0.5, color: 0xffe8b2, alpha: 0.7 },
-    //                 { at: 1.0, color: 0xf4c677, alpha: 0.5 },
-    //             ]
-    //         },
-    //         motion: {
-    //             mode: 'follow',
-    //             sourceId: 'sun-body',               // ← the object we’ll add later
-    //             offset: { x: 0, y: 0 },
-    //             rotateSpeedDeg: 0,                  // rays don't rotate, they just follow
-    //             jitter: { ampDeg: 0.8, freq: 0.12 } // tiny life-like shimmer
-    //         },
-    //         dimming: {
-    //             enabled: true,
-    //             base: 0.12, amp: 0.10, freq: 0.05, noise: 0.03
-    //         },
-    //         occluders: ['ground', 'water']
-    //     }
-    // }
 
     // {
     //     id: 'title',
