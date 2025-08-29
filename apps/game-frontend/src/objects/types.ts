@@ -12,7 +12,8 @@ export type ObjectKind =
     | 'sunrays'
     | 'sun'
     | 'lensflare'
-    | 'container';
+    | 'container'
+    | 'button';
 
 export type RectHitArea = { kind: 'rect'; width: number; height: number; originCenter?: boolean };
 
@@ -86,6 +87,35 @@ export type TextObject = BaseObject & {
     type: 'text';
     text: string;
     style?: Phaser.Types.GameObjects.Text.TextStyle;
+};
+
+export type ButtonObject = BaseObject & {
+    type: 'button';
+    width: number;
+    height: number;
+    shape: 'rectangle' | 'circle';
+    displayMode: 'text' | 'icon' | 'both';
+    text?: string;
+    icon?: string;
+    backgroundColor?: number;
+    borderColor?: number;
+    textColor?: string;
+    iconColor?: number;
+    fontSize?: string;
+    fontFamily?: string;
+    hoverScale?: number;
+    clickScale?: number;
+    hoverTint?: number;
+    clickTint?: number;
+    hoverSound?: string;
+    clickSound?: string;
+    
+    // Background image support
+    backgroundImage?: string;
+    backgroundImageScale?: 'fit' | 'fill' | 'stretch';
+    backgroundImageOrigin?: { x: number; y: number };
+    
+    onClick?: string | (() => void);
 };
 
 export type LeavesObject = BaseObject & {
@@ -211,6 +241,7 @@ export type SceneObject =
     | SunObject
     | LensFlareObject
     | ContainerObject
+    | ButtonObject
     ;
 
 export type ObjectsConfig = SceneObject[];

@@ -13,15 +13,27 @@ export class LevisR3WheelScene extends Phaser.Scene {
     preload() {
         // Load background image
         this.load.image('bg-16x9', 'assets/backgrounds/levisR3_BG.png');
+
+        // Load classic social media icons
+        this.load.svg('facebook-icon', 'assets/icons/facebook-classic-icon.svg');
+        this.load.svg('instagram-icon', 'assets/icons/instagram-classic-icon.svg');
+        this.load.svg('youtube-icon', 'assets/icons/youtube-classic-icon.svg');
+        this.load.svg('zalo-icon', 'assets/icons/zalo-classic-icon.svg');
+        this.load.svg('tiktok-icon', 'assets/icons/tiktok-classic-icon.svg');
     }
 
     create() {
+        console.log('[Scene] Starting scene creation...');
+        
         // 1) Make sure textures referenced by object config exist
         ensureBasicTextures(this);
 
         // 2) Build scene graph using ObjectLoader + config
+        console.log('[Scene] Loading objects from config...');
         this.objects = loadObjects(this, LevisR3Objects);
-
+        console.log('[Scene] Objects loaded:', Object.keys(this.objects));
+        console.log('[Scene] Footer object:', this.objects['footer']);
+        
         // 3) Hook responsive manager
         this.responsive = new ResponsiveManager(this, this.objects, LevisR3Responsive);
         const onResize = () => this.responsive.apply();
@@ -33,13 +45,23 @@ export class LevisR3WheelScene extends Phaser.Scene {
         
         // 5) Ensure footer text quality
         this.ensureFooterTextQuality();
+        
+        console.log('[Scene] Scene creation completed');
     }
 
     private positionFooter() {
+        console.log('[Scene] Positioning footer...');
         const background = this.objects['bg'] as any;
         const footer = this.objects['footer'] as Phaser.GameObjects.Container;
         
-        if (!background?.getBackgroundBounds || !footer) return;
+        console.log('[Scene] Background object:', background);
+        console.log('[Scene] Footer object:', footer);
+        console.log('[Scene] Background has getBackgroundBounds:', !!background?.getBackgroundBounds);
+        
+        if (!background?.getBackgroundBounds || !footer) {
+            console.warn('[Scene] Cannot position footer - missing background bounds or footer');
+            return;
+        }
         
         const updateFooterPosition = () => {
             const bgBounds = background.getBackgroundBounds();
@@ -78,6 +100,7 @@ export class LevisR3WheelScene extends Phaser.Scene {
         // Update on resize
         this.scale.on('resize', updateFooterPosition);
     }
+
 
     private ensureFooterTextQuality() {
         const footer = this.objects['footer'] as Phaser.GameObjects.Container;

@@ -15,6 +15,7 @@ import {
     SunRaysObject,
     SunObject,
     LensFlareObject,
+    ButtonObject,
 } from './types';
 import { GroupNode } from '../core/GroupNode';
 import { AutumnLeaves } from '../effects/AutumnLeaves';
@@ -23,6 +24,7 @@ import { WaterSurface } from '../effects/WaterSurface';
 import { SunRays } from '../effects/SunRays';
 import { SunBody } from '../effects/Sun';
 import { LensFlare, LensFlareOptions } from '../effects/LensFlare';
+import { UIButton } from '../ui/Button';
 
 function applyCommon(o: Phaser.GameObjects.GameObject, cfg: SceneObject) {
     // @ts-ignore - setDepth exists on DisplayObject
@@ -183,6 +185,59 @@ function createText(scene: Phaser.Scene, cfg: TextObject) {
     return t;
 }
 
+function createButton(scene: Phaser.Scene, cfg: ButtonObject) {
+    console.log('[ObjectLoader] Creating button:', cfg.id, cfg);
+    
+    try {
+        // Create UIButton with the configuration
+        // IMPORTANT: Pass x,y coordinates to prevent UIButton from positioning at (0,0) initially
+        const button = new UIButton(scene, {
+            x: cfg.x ?? 0,           // Pass x coordinate to prevent positioning at (0,0)
+            y: cfg.y ?? 0,           // Pass y coordinate to prevent positioning at (0,0)
+            width: cfg.width,
+            height: cfg.height,
+            shape: cfg.shape,
+            displayMode: cfg.displayMode,
+            text: cfg.text,
+            icon: cfg.icon,
+            backgroundColor: cfg.backgroundColor,
+            borderColor: cfg.borderColor,
+            textColor: cfg.textColor?.toString() || '#000000',
+            iconColor: cfg.iconColor,
+            fontSize: cfg.fontSize,
+            fontFamily: cfg.fontFamily,
+            
+            // Background image support - ADDED THESE PROPERTIES
+            backgroundImage: cfg.backgroundImage,
+            backgroundImageScale: cfg.backgroundImageScale,
+            backgroundImageOrigin: cfg.backgroundImageOrigin,
+            
+            hoverScale: cfg.hoverScale,
+            clickScale: cfg.clickScale,
+            hoverTint: cfg.hoverTint,
+            clickTint: cfg.clickTint,
+            hoverSound: cfg.hoverSound,
+            clickSound: cfg.clickSound,
+            onClick: typeof cfg.onClick === 'string' 
+                ? () => { window.open(cfg.onClick as string, '_blank'); }
+                : (cfg.onClick || (() => {})),
+        });
+        
+        console.log('[ObjectLoader] Button created successfully:', cfg.id, button);
+        
+        // Apply common properties
+        applyCommon(button.root, cfg);
+        
+        console.log('[ObjectLoader] Button properties applied:', cfg.id, button.root);
+        
+        // Return the button root for compatibility with the object system
+        return button.root;
+    } catch (error) {
+        console.error('[ObjectLoader] Error creating button:', cfg.id, error);
+        throw error;
+    }
+}
+
 function createGround(scene: Phaser.Scene, cfg: GroundObject) {
     const rect = scene.add.rectangle(cfg.x ?? 0, cfg.y ?? 0, cfg.width, cfg.height,
         cfg.color ?? 0x000000, cfg.alpha ?? 0)
@@ -274,11 +329,14 @@ function createLensFlare(scene: Phaser.Scene, cfg: LensFlareObject) {
 }
 
 export function loadObjects(scene: Phaser.Scene, list: ObjectsConfig) {
+    console.log('[ObjectLoader] Starting to load objects:', list.length, 'items');
+    
     // sort by z so z=0 background is created first (optional; setDepth also ensures order)
     const sorted = [...list].sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
     const made: Record<string, Phaser.GameObjects.GameObject> = {};
 
     for (const item of sorted) {
+        console.log('[ObjectLoader] Processing item:', item.type, item.id, item);
         let obj: Phaser.GameObjects.GameObject | null = null;
         switch (item.type) {
             case 'container': {
@@ -310,7 +368,9 @@ export function loadObjects(scene: Phaser.Scene, list: ObjectsConfig) {
                 // Optional: build simple visual children (safe: no physics/FX here)
                 const children = anyItem.children as any[] | undefined;
                 if (children?.length) {
+                    console.log('[ObjectLoader] Container has children:', children.length, 'children');
                     for (const child of children) {
+                        console.log('[ObjectLoader] Processing child:', child.type, child.id);
                         let ch: Phaser.GameObjects.GameObject | null = null;
                         switch (child.type) {
                             case 'image': ch = createImage(scene, child); break;
@@ -318,12 +378,18 @@ export function loadObjects(scene: Phaser.Scene, list: ObjectsConfig) {
                             case 'tileSprite': ch = createTileSprite(scene, child); break;
                             case 'rect': ch = createRect(scene, child); break;
                             case 'text': ch = createText(scene, child); break;
-                            default: ch = null; // avoid physics/FX inside container by default
+                            case 'button': ch = createButton(scene, child as ButtonObject); break;
+                            default: 
+                                console.warn('[ObjectLoader] Unknown child type:', child.type, child.id);
+                                ch = null; // avoid physics/FX inside container by default
                         }
                         if (ch) {
+                            console.log('[ObjectLoader] Child created successfully:', child.type, child.id, ch);
                             (ch as any).setPosition?.(child.x ?? 0, child.y ?? 0);
                             c.add(ch);
                             if (child.id) made[child.id] = ch;
+                        } else {
+                            console.warn('[ObjectLoader] Failed to create child:', child.type, child.id);
                         }
                     }
                 }
@@ -348,6 +414,11 @@ export function loadObjects(scene: Phaser.Scene, list: ObjectsConfig) {
                 break;
             case 'text':
                 obj = createText(scene, item);
+                break;
+            case 'button':
+                console.log('[ObjectLoader] Found button case for:', item.id);
+                obj = createButton(scene, item as ButtonObject);
+                console.log('[ObjectLoader] Button object created:', item.id, obj);
                 break;
             case 'leaves': {
                 const lo = item as LeavesObject;
