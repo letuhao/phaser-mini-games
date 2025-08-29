@@ -13,6 +13,59 @@ export const LevisR3Objects: ObjectsConfig = [
     },
     {
         type: 'container',
+        id: 'effects-container',
+        z: 100, // Above background, below footer
+        x: 0,
+        y: 0,
+        // Container will be positioned and sized dynamically based on background image bounds
+        // This allows effects to be positioned relative to the background image
+        children: [
+            // Example effects - you can add more or modify these
+            {
+                type: 'rect',
+                id: 'effects-debug-border',
+                x: 0,
+                y: 0,
+                width: 2560,  // Base width - will auto-scale with background (same as footer)
+                height: 1440,  // Base height - will auto-scale with background
+                fill: 0x00ff00, // Green border for debugging (set alpha to 0 to hide)
+                alpha: 0.0,     // More visible for debugging - you can set this to 0 when done
+                origin: { x: 0, y: 0 }, // Top-left aligned
+            } as RectObject,
+            // Ember effect - spawns within container bounds
+            {
+                type: 'effect',
+                id: 'embers-effect',
+                effectType: 'embers',
+                x: 0,           // Relative to container (0 = left edge)
+                y: 0,           // Relative to container (0 = top edge)
+                // Ember configuration - NEW spawnArea system for precise positioning
+                // FIXED: Now using proper background-relative coordinates
+                // spawnArea coordinates are relative to the background image's (0,0) origin
+                // This ensures proper scaling across different screen sizes
+                // x: 0 = left edge of background image, y: 0 = top edge of background image
+                count: 50,      // Number of embers in the pool
+                spawnArea: { 
+                    x: 0,              // Start from left edge of background image (0 = left edge)
+                    y: 1200,          // 200px from bottom (1440 - 200 = 1240)
+                    width: 2560,      // Full background image width
+                    height: 500       // 200px tall spawn area at bottom
+                },
+                budget: 50,     // How many embers are active at once
+                debugSpawnArea: false, // Show red rectangle for spawn area debugging - will help identify X position issues
+            } as any, // Type assertion for now
+            // Add more effects here:
+            // - Fireflies effect
+            // - StarGrow effect
+            // - AutumnLeaves effect
+            // - Rain effect
+            // - Wind effect
+            // - LensFlare effect
+            // - WaterSurface effect
+        ]
+    },
+    {
+        type: 'container',
         id: 'footer',
         z: 200, // Above background
         x: 0,

@@ -13,7 +13,8 @@ export type ObjectKind =
     | 'sun'
     | 'lensflare'
     | 'container'
-    | 'button';
+    | 'button'
+    | 'effect';
 
 export type RectHitArea = { kind: 'rect'; width: number; height: number; originCenter?: boolean };
 
@@ -226,6 +227,19 @@ export type LensFlareObject = BaseObject & {
     options?: import('../effects/LensFlare').LensFlareOptions & { sourceId?: string };
 };
 
+export type EffectObject = BaseObject & {
+    type: 'effect';
+    effectType: 'embers' | 'fireflies' | 'starGrow' | 'autumnLeaves' | 'rain' | 'wind' | 'lensFlare' | 'waterSurface';
+    // Common effect properties
+    count?: number;                  // how many particles in the pool
+    area?: { w: number; h: number }; // spawn area dimensions (legacy)
+    spawnArea?: { x: number; y: number; width: number; height: number }; // exact spawn rectangle within container
+    baseY?: number;                  // base Y position for spawning (legacy)
+    budget?: number;                 // how many particles are active at once
+    debugSpawnArea?: boolean;        // show spawn area rectangle for debugging
+    // Additional effect-specific properties can be added here
+};
+
 export type SceneObject =
     | BackgroundObject
     | ImageObject
@@ -242,6 +256,7 @@ export type SceneObject =
     | LensFlareObject
     | ContainerObject
     | ButtonObject
+    | EffectObject
     ;
 
 export type ObjectsConfig = SceneObject[];

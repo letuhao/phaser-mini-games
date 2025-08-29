@@ -32,7 +32,10 @@ export class LevisR3WheelScene extends Phaser.Scene {
         console.log('[Scene] Loading objects from config...');
         this.objects = loadObjects(this, LevisR3Objects);
         console.log('[Scene] Objects loaded:', Object.keys(this.objects));
+        console.log('[Scene] All objects details:', this.objects);
         console.log('[Scene] Footer object:', this.objects['footer']);
+        console.log('[Scene] Effects container object:', this.objects['effects-container']);
+        console.log('[Scene] Embers effect object:', this.objects['embers-effect']);
         
         // 3) Hook responsive manager
         this.responsive = new ResponsiveManager(this, this.objects, LevisR3Responsive);
@@ -43,7 +46,10 @@ export class LevisR3WheelScene extends Phaser.Scene {
         // 4) Position footer at the bottom of background image
         this.positionFooter();
         
-        // 5) Ensure footer text quality
+        // 5) Position and size effects container based on background image
+        this.positionEffectsContainer();
+        
+        // 6) Ensure footer text quality
         this.ensureFooterTextQuality();
         
         console.log('[Scene] Scene creation completed');
@@ -99,6 +105,77 @@ export class LevisR3WheelScene extends Phaser.Scene {
         
         // Update on resize
         this.scale.on('resize', updateFooterPosition);
+    }
+
+    private positionEffectsContainer() {
+        console.log('[Scene] Positioning effects container...');
+        const background = this.objects['bg'] as any;
+        const effectsContainer = this.objects['effects-container'] as Phaser.GameObjects.Container;
+        
+        console.log('[Scene] Background object:', background);
+        console.log('[Scene] Effects container object:', effectsContainer);
+        console.log('[Scene] Background has getBackgroundBounds:', !!background?.getBackgroundBounds);
+        
+        if (!background?.getBackgroundBounds || !effectsContainer) {
+            console.warn('[Scene] Cannot position effects container - missing background bounds or effects container');
+            return;
+        }
+        
+        const updateEffectsContainerPosition = () => {
+            const bgBounds = background.getBackgroundBounds();
+            if (!bgBounds) return;
+            
+            // FOLLOW THE SAME LOGIC AS FOOTER: Use scaled background bounds
+            // Position effects container at the SAME position as the background image
+            effectsContainer.setPosition(bgBounds.left, bgBounds.top);
+            
+            // Apply the SAME scaling as the background to maintain proportions
+            // Calculate scale factor based on background width ratio
+            const scaleX = bgBounds.width / 2560;  // 2560 is original background width
+            const scaleY = bgBounds.height / 1440; // 1440 is original background height
+            
+            // Apply uniform scaling to prevent distortion
+            effectsContainer.setScale(scaleX, scaleX); // Use scaleX for both to maintain aspect ratio
+            
+            // Update embers effect with container bounds if it exists
+            const embersEffect = this.objects['embers-effect'] as any;
+            console.log('[Scene] Looking for embers effect:', {
+                embersEffect: !!embersEffect,
+                hasEmbers: !!(embersEffect && embersEffect.__embers),
+                hasUpdateMethod: !!(embersEffect && embersEffect.__embers && embersEffect.__embers.updateContainerBounds)
+            });
+            
+            if (embersEffect && embersEffect.__embers && embersEffect.__embers.updateContainerBounds) {
+                console.log('[Scene] Updating embers container bounds:', {
+                    left: bgBounds.left,
+                    top: bgBounds.top,
+                    width: bgBounds.width,
+                    height: bgBounds.height
+                });
+                embersEffect.__embers.updateContainerBounds({
+                    left: bgBounds.left,        // Use scaled background bounds (same as container)
+                    top: bgBounds.top,          // Use scaled background bounds (same as container)
+                    width: bgBounds.width,      // Use scaled background width
+                    height: bgBounds.height     // Use scaled background height
+                });
+            } else {
+                console.warn('[Scene] Cannot update embers bounds - missing effect or method');
+            }
+            
+            console.log('Effects container positioned:', {
+                screenSize: { width: this.scale.width, height: this.scale.height },
+                scaledBackgroundBounds: { left: bgBounds.left, top: bgBounds.top, width: bgBounds.width, height: bgBounds.height },
+                calculatedScale: { x: scaleX, y: scaleX },
+                actualContainerPosition: { x: effectsContainer.x, y: effectsContainer.y },
+                actualContainerScale: effectsContainer.scale
+            });
+        };
+        
+        // Initial positioning
+        updateEffectsContainerPosition();
+        
+        // Update on resize
+        this.scale.on('resize', updateEffectsContainerPosition);
     }
 
 
