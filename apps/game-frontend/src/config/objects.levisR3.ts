@@ -101,7 +101,7 @@ export const LevisR3Objects: ObjectsConfig = [
                 
                 // Background image support - Instagram icon
                 backgroundImage: 'instagram-icon',
-                backgroundImageScale: 'fit',      // Scale to fit within button
+                backgroundImageScale: 'fit',      // Scale to fit within button (now works properly with 50x50 SVG)
                 backgroundImageOrigin: { x: 0.5, y: 0.5 }, // Center position
                 
                 // Click action - open Instagram
