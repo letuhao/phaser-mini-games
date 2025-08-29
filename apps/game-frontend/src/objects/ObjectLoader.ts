@@ -71,8 +71,29 @@ function createBackground(scene: Phaser.Scene, cfg: BackgroundObject) {
             //   ts.tilePositionX += 0.1;
             // });
         } else {
-            const img = scene.add.image(0, 0, cfg.textureKey).setOrigin(0, 0);
-            img.setDisplaySize(w, h);
+            const img = scene.add.image(0, 0, cfg.textureKey).setOrigin(0.5, 0.5);
+            const applyFit = () => {
+                const cw = scene.scale.width;
+                const ch = scene.scale.height;
+                const txw = img.texture.getSourceImage().width;
+                const txh = img.texture.getSourceImage().height;
+                const scaleX = cw / txw;
+                const scaleY = ch / txh;
+                const fit = (cfg.fit ?? 'stretch');
+                let s = 1;
+                if (fit === 'contain') s = Math.min(scaleX, scaleY);
+                else if (fit === 'cover') s = Math.max(scaleX, scaleY);
+                else s = 1; // 'stretch' uses setDisplaySize below
+
+                if (fit === 'stretch') {
+                    img.setDisplaySize(cw, ch);
+                } else {
+                    img.setScale(s);
+                }
+                img.setPosition(cw / 2, ch / 2);
+            };
+            applyFit();
+            scene.scale.on('resize', applyFit);
             o = img;
         }
     } else {
@@ -84,19 +105,15 @@ function createBackground(scene: Phaser.Scene, cfg: BackgroundObject) {
     // Always stay under everything else
     (o as any).setDepth(typeof cfg.z === 'number' ? cfg.z : 0);
 
-    // Auto-resize
+    // Auto-resize for non-fit and non-image cases
     scene.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
         const { width, height } = gameSize;
-        if ((o as any).setDisplaySize) {
-            (o as any).setDisplaySize(width, height);
-        } else if (o instanceof Phaser.GameObjects.Rectangle) {
+        if (o instanceof Phaser.GameObjects.Rectangle) {
             o.setSize(width, height);
             o.setDisplaySize(width, height);
         } else if (o instanceof Phaser.GameObjects.TileSprite) {
             o.width = width;
             o.height = height;
-        } else if (o instanceof Phaser.GameObjects.Image) {
-            o.setDisplaySize(width, height);
         }
     });
 

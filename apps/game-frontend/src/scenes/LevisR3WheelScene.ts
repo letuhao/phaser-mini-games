@@ -16,7 +16,9 @@ export class LevisR3WheelScene extends Phaser.Scene {
     constructor() { super('LevisR3Wheel'); }
 
     preload() {
-        // Load SFX, images if you have CDN/asset files. The textures below are generated at runtime.
+        // Load assets
+        this.load.image('bg-16x9', 'assets/backgrounds/levisR3_BG.png');
+        // The textures below are generated at runtime.
     }
 
     create() {

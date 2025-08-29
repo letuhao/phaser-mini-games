@@ -45,6 +45,8 @@ export type BackgroundObject = BaseObject & {
     fillAlpha?: number;         // 0..1
     textureKey?: string;        // if provided, will stretch to canvas
     tile?: boolean;             // use TileSprite if true
+    /** How to fit the texture into the canvas (when textureKey provided). Default: 'stretch' */
+    fit?: 'stretch' | 'contain' | 'cover';
 };
 
 export type ImageObject = BaseObject & {

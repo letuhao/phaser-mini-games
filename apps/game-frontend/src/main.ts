@@ -1,7 +1,5 @@
 import Phaser from 'phaser';
 import { AppConfig, CanvasMode } from './appConfig';
-import { BootScene } from './scenes/BootScene';
-import { WheelScene } from './scenes/WheelScene';
 import { LevisR3WheelScene } from './scenes/LevisR3WheelScene';
 
 type Size = { width: number; height: number };
@@ -99,25 +97,16 @@ function makeGame(size: { width: number; height: number }) {
                 debug: false
             }
         },
-        scene: [BootScene, WheelScene],
+        scene: [LevisR3WheelScene],
     };
-
-    return new Phaser.Game({
-        type: Phaser.AUTO,
-        parent: 'game-host',
-        backgroundColor: 'rgba(0,0,0,0)',
-        scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: 1440, height: 810 },
-        physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 0 }, debug: false } },
-        scene: [ /* BootScene, ... */ LevisR3WheelScene], // keep existing scenes too
-    });
+    return new Phaser.Game(cfg);
 }
 
 function boot() {
     clampDpr(AppConfig.canvas.maxDevicePixelRatio);
     readQueryOverrides();
 
-    const modeEl = document.getElementById('mode')!;
-    modeEl.textContent = `mode=${AppConfig.canvas.mode}`;
+    // Minimal DOM: no extra labels/controls present
 
     const size = applyCanvasWrapSize(AppConfig.canvas.mode);
     game = makeGame(size);
@@ -132,28 +121,7 @@ function boot() {
         }
     });
 
-    // Dev controls to test dynamic resizing (fixed mode)
-    const w = document.getElementById('w') as HTMLInputElement;
-    const h = document.getElementById('h') as HTMLInputElement;
-    const applyBtn = document.getElementById('apply') as HTMLButtonElement;
-    w.value = String(size.width);
-    h.value = String(size.height);
-    applyBtn.onclick = () => {
-        const newW = Math.max(100, Number(w.value || 0));
-        const newH = Math.max(100, Number(h.value || 0));
-        const mode = AppConfig.canvas.mode;
-
-        // Update container size
-        if (mode === 'fixed') {
-            const wrap = document.getElementById('canvas-wrap') as HTMLDivElement;
-            wrap.style.width = `${newW}px`;
-            wrap.style.height = `${newH}px`;
-            game?.scale.resize(newW, newH);
-        } else {
-            // In other modes, override via query or CSS; for demo we force resize:
-            game?.scale.resize(newW, newH);
-        }
-    };
+    // No dev controls; sizing is governed by AppConfig mode and #canvas-wrap CSS
 }
 
 boot();

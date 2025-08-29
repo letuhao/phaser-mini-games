@@ -3,7 +3,7 @@ export type CanvasMode = 'fixed' | 'fit-parent' | 'fit-window';
 
 export const AppConfig = {
   canvas: {
-    mode: 'fixed' as CanvasMode,
+    mode: 'fit-parent' as CanvasMode,
     width: 1280,
     height: 720,
     maxDevicePixelRatio: 1.5,
