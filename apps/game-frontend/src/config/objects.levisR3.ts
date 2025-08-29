@@ -1,6 +1,6 @@
 import type { ObjectsConfig } from '../objects/types';
 
-// Single deepest background object. It stretches to the canvas size.
+// Single background object that scales with the canvas while maintaining 16:9 aspect ratio
 export const LevisR3Objects: ObjectsConfig = [
     {
         type: 'background',
@@ -9,6 +9,6 @@ export const LevisR3Objects: ObjectsConfig = [
         // Use the loaded 16:9 background image
         textureKey: 'bg-16x9',
         tile: false,
-        fit: 'contain', // center the image and preserve aspect ratio
+        fit: 'contain', // This ensures the image maintains aspect ratio and centers on screen
     },
 ];
