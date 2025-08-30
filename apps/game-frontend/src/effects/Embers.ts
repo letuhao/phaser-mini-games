@@ -68,6 +68,7 @@ export class Embers {
     private gravity: number;
     private wind: number;
     private textureConfig: { key: string; size: number; shape: string };
+    private margin: number = 50; // Default margin, will be updated from spawn area config
 
     constructor(scene: Phaser.Scene, opts: Opts = {}) {
         const pool = opts.count ?? 28;
@@ -127,7 +128,8 @@ export class Embers {
                 gravity: this.gravity,
                 wind: this.wind,
                 texture: this.textureConfig
-            }
+            },
+            note: "Embers instance created, waiting for container bounds to be set"
         }, 'constructor');
 
         // ensure texture exists with custom shape and size
@@ -246,17 +248,32 @@ export class Embers {
     updateContainerBounds(bounds: { left: number; top: number; width: number; height: number }) {
         const wasFirstTime = !this.containerBounds;
         this.containerBounds = bounds;
-        logDebug('Embers', 'Container bounds updated', { bounds, wasFirstTime }, 'updateContainerBounds');
+        
+        logInfo('Embers', 'Container bounds updated', { 
+            bounds, 
+            wasFirstTime,
+            previousBounds: this.containerBounds,
+            note: "Container bounds received from ResponsiveManager"
+        }, 'updateContainerBounds');
+        
+        // Look for spawn area containers within the parent container
+        this.findSpawnAreaContainers();
         
         // Update debug rectangle position if it exists
         if (this.debugRect && this.debugSpawnArea) {
-            // Position debug rectangle at the spawn area location
-            // Since the debug rectangle is a child of the root container, we need to position it
-            // relative to the container's origin, not the screen coordinates
+            // The spawn area is already scaled by findSpawnAreaContainers()
+            // Just position the debug rectangle at the center of the scaled spawn area
             const debugX = this.spawnArea.x + this.spawnArea.width / 2;
             const debugY = this.spawnArea.y + this.spawnArea.height / 2;
+            
             this.debugRect.setPosition(debugX, debugY);
-            logDebug('Embers', 'Debug rectangle updated to container-relative position', { x: debugX, y: debugY }, 'updateContainerBounds');
+            this.debugRect.setSize(this.spawnArea.width, this.spawnArea.height);
+            
+            logDebug('Embers', 'Debug rectangle updated to spawn area position', { 
+                spawnArea: this.spawnArea,
+                debugPosition: { x: debugX, y: debugY },
+                note: "Debug rectangle shows the scaled spawn area position"
+            }, 'updateContainerBounds');
         }
         
         // If this is the first time bounds are set, start the embers with the configured budget
@@ -264,15 +281,123 @@ export class Embers {
             const budget = Math.min(this.sprites.length, this.initialBudget);
             logInfo('Embers', 'First time bounds set, starting embers with budget', { 
                 budget, 
-                configured: this.initialBudget 
+                configured: this.initialBudget,
+                containerBounds: bounds,
+                spawnArea: this.spawnArea,
+                note: "Embers will now start spawning within the container bounds"
             }, 'updateContainerBounds');
             this.setBudget(budget);
+        } else {
+            logDebug('Embers', 'Container bounds updated (not first time)', {
+                bounds,
+                previousBounds: this.containerBounds,
+                note: "Bounds updated during resize, embers continue with existing budget"
+            }, 'updateContainerBounds');
+        }
+    }
+    
+    /**
+     * Find spawn area containers within the parent container
+     */
+    private findSpawnAreaContainers() {
+        if (!this.containerBounds) return;
+        
+        // Look for spawn area containers in the parent container
+        const parentContainer = this.root.scene.children.getByName('effects-container') as Phaser.GameObjects.Container;
+        if (!parentContainer || !parentContainer.list) return;
+        
+        for (const child of parentContainer.list) {
+            if (child && (child as any).__spawnAreaConfig && (child as any).__spawnAreaConfig.effectType === 'embers') {
+                const spawnAreaConfig = (child as any).__spawnAreaConfig;
+                
+                logInfo('Embers', 'Found spawn area container', {
+                    spawnAreaId: child.name,
+                    config: spawnAreaConfig,
+                    note: "Using spawn area container for positioning instead of hardcoded spawnArea"
+                }, 'findSpawnAreaContainers');
+                
+                // The spawn area container is positioned by ResponsiveManager using dock/align
+                // We just need to get its current position and size after positioning
+                const spawnAreaContainer = child as Phaser.GameObjects.Container;
+                
+                // Get the spawn area's current position and size (already positioned by ResponsiveManager)
+                this.spawnArea = {
+                    x: spawnAreaContainer.x,
+                    y: spawnAreaContainer.y,
+                    width: spawnAreaContainer.width,
+                    height: spawnAreaContainer.height
+                };
+                
+                // Update margin from spawn area config
+                this.margin = spawnAreaConfig.margin || 50;
+                
+                logInfo('Embers', 'Using spawn area container position from ResponsiveManager', {
+                    spawnAreaContainer: {
+                        name: spawnAreaContainer.name,
+                        x: spawnAreaContainer.x,
+                        y: spawnAreaContainer.y,
+                        width: spawnAreaContainer.width,
+                        height: spawnAreaContainer.height
+                    },
+                    finalSpawnArea: this.spawnArea,
+                    margin: this.margin,
+                    note: "Spawn area positioned by ResponsiveManager dock/align system"
+                }, 'findSpawnAreaContainers');
+                
+                break; // Found the spawn area, no need to continue
+            }
         }
     }
 
     /** Get current container bounds for debugging */
     getContainerBounds() {
         return this.containerBounds;
+    }
+    
+    /** Get current spawn area information for debugging */
+    getSpawnAreaInfo() {
+        if (!this.containerBounds) {
+            return {
+                hasContainerBounds: false,
+                note: "Container bounds not set yet"
+            };
+        }
+        
+        const scaleX = this.containerBounds.width / 2560;
+        const scaleY = this.containerBounds.height / 1440;
+        
+        return {
+            hasContainerBounds: true,
+            originalSpawnArea: this.spawnArea,
+            scaleFactors: { scaleX, scaleY },
+            scaledSpawnArea: {
+                x: this.spawnArea.x * scaleX,
+                y: this.spawnArea.y * scaleY,
+                width: this.spawnArea.width * scaleX,
+                height: this.spawnArea.height * scaleY
+            },
+            containerBounds: this.containerBounds,
+            note: "Spawn area is scaled to match container size for responsive behavior"
+        };
+    }
+    
+    /** Manually start embers for testing purposes */
+    manualStart() {
+        logInfo('Embers', 'Manual start requested', {
+            currentActive: this.activeCount,
+            totalSprites: this.sprites.length,
+            containerBounds: this.containerBounds,
+            spawnArea: this.spawnArea,
+            note: "Manually starting embers for testing"
+        }, 'manualStart');
+        
+        if (this.containerBounds) {
+            this.setBudget(this.initialBudget);
+        } else {
+            logWarn('Embers', 'Cannot start embers - no container bounds', {
+                note: "Container bounds must be set before embers can start"
+            }, 'manualStart');
+        }
     }
 
     /** Adjust how many embers are active. */
@@ -293,7 +418,13 @@ export class Embers {
         // Activate more
         if (clamped > this.activeCount) {
             logDebug('Embers', 'Activating more embers', { 
-                count: clamped - this.activeCount 
+                count: clamped - this.activeCount,
+                currentActive: this.activeCount,
+                targetActive: clamped,
+                totalSprites: this.sprites.length,
+                containerBounds: this.containerBounds,
+                spawnArea: this.spawnArea,
+                note: "New embers will be activated and positioned within the scaled spawn area"
             }, 'setBudget');
             for (let i = this.activeCount; i < clamped; i++) {
                 this.activate(this.sprites[i]);
@@ -315,7 +446,14 @@ export class Embers {
 
     // ---- internals ----
     private activate(sp: Phaser.GameObjects.Image) {
-        logDebug('Embers', 'Activating ember sprite', sp, 'activate');
+        logDebug('Embers', 'Activating ember sprite', {
+            sprite: sp,
+            spriteIndex: this.sprites.indexOf(sp),
+            currentActive: this.activeCount,
+            containerBounds: this.containerBounds,
+            spawnArea: this.spawnArea,
+            note: "This ember will be positioned and animated within the scaled spawn area"
+        }, 'activate');
         sp.setVisible(true);
         this.resetAndTween(sp);
     }
@@ -337,65 +475,25 @@ export class Embers {
         
         if (this.containerBounds) {
             // Use spawnArea for precise positioning within container
-            const margin = 50;
+            // The spawnArea coordinates are already scaled by findSpawnAreaContainers()
+            // No need to scale them again here
             
-            // FIXED: Calculate spawn area relative to background image bounds
-            // The spawnArea coordinates are relative to the background image's (0,0) origin
-            // Since the container is positioned at the background image's screen position,
-            // we only need the spawnArea offset, not the full containerBounds.left
-            // REMOVED: containerBounds.left was redundant and caused double offset issues
-            const spawnX = this.spawnArea.x;  // Relative to background image left edge
-            const spawnY = this.spawnArea.y;  // Relative to background image top edge
+            // Spawn within the already-scaled spawn area
+            x = Phaser.Math.Between(this.spawnArea.x + this.margin, this.spawnArea.x + this.spawnArea.width - this.margin);
+            y = Phaser.Math.Between(this.spawnArea.y + this.margin, this.spawnArea.y + this.spawnArea.height - this.margin);
             
-            // FIXED: Use the configured spawnArea dimensions directly
-            // This ensures embers spawn in the exact area specified, not limited by container size
-            // BEFORE: Math.min(this.spawnArea.width, this.containerBounds.width - 2 * margin) - WRONG!
-            // AFTER: this.spawnArea.width - CORRECT!
-            const spawnWidth = this.spawnArea.width;
-            const spawnHeight = this.spawnArea.height;
-            
-            // Spawn within the specified spawn area
-            x = Phaser.Math.Between(spawnX + margin, spawnX + spawnWidth - margin);
-            y = Phaser.Math.Between(spawnY + margin, spawnY + spawnHeight - margin);
-            
-            logDebug('Embers', 'Using simplified spawn area positioning', {
+            logDebug('Embers', 'Using scaled spawn area positioning', {
                 containerBounds: this.containerBounds,
                 spawnArea: this.spawnArea,
                 calculatedPos: { x, y },
-                margin,
-                spawnAreaRelative: {
-                    x: spawnX,
-                    y: spawnY,
-                    width: spawnWidth,
-                    height: spawnHeight
-                },
+                margin: this.margin,
                 spawnAreaWithMargin: {
-                    minX: spawnX + margin,
-                    maxX: spawnX + spawnWidth - margin,
-                    minY: spawnY + margin,
-                    maxY: spawnY + spawnHeight - margin
+                    minX: this.spawnArea.x + this.margin,
+                    maxX: this.spawnArea.x + this.spawnArea.width - this.margin,
+                    minY: this.spawnArea.y + this.margin,
+                    maxY: this.spawnArea.y + this.spawnArea.height - this.margin
                 },
-                containerInfo: {
-                    containerWidth: this.containerBounds.width,
-                    containerHeight: this.containerBounds.height,
-                    spawnAreaWidth: this.spawnArea.width,
-                    spawnAreaHeight: this.spawnArea.height,
-                    margin: margin,
-                    note: "Using full spawnArea dimensions, not limited by container size"
-                },
-                // Simplified X positioning debug info
-                xPositioning: {
-                    spawnAreaLeft: spawnX,
-                    spawnAreaRight: spawnX + spawnWidth,
-                    spawnRange: `${spawnX + margin} to ${spawnX + spawnWidth - margin}`,
-                    finalX: x,
-                    isWithinBounds: (x >= spawnX + margin) && (x <= spawnX + spawnWidth - margin)
-                },
-                // NEW: Simplified coordinate system explanation
-                coordinateSystem: {
-                    spawnAreaConfig: `x:${this.spawnArea.x}, y:${this.spawnArea.y}`,
-                    explanation: "spawnArea coordinates are relative to background image (0,0) origin, no container offset needed"
-                }
+                note: "Spawn area coordinates are already scaled by findSpawnAreaContainers"
             }, 'resetAndTween');
         } else {
             // Fallback to spawnArea-based positioning

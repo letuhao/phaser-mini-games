@@ -1,4 +1,4 @@
-import { LogLevel, LoggerConfig, DEFAULT_LOGGER_CONFIG, isObjectLoggingEnabled, getObjectLogLevel } from './LoggerConfig';
+import { LogLevel, LoggerConfig, DEFAULT_LOGGER_CONFIG, isObjectLoggingEnabled, getObjectLogLevel } from '../config/LoggerConfig';
 
 export class Logger {
     private static instance: Logger;

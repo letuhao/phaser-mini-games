@@ -1,8 +1,8 @@
 import Phaser from 'phaser';
-import type { SunObject } from '../objects/types';
+import type { SunObjectConfig } from '../objects/types';
 import { logDebug } from '../core/Logger';
 
-type Opts = NonNullable<SunObject['options']>;
+type Opts = NonNullable<SunObjectConfig['options']>;
 
 function R(o?: Opts) {
     const d: Required<Opts> = {

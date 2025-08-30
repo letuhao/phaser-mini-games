@@ -1,6 +1,8 @@
-// apps/game-frontend/src/core/ResponsiveManager.ts
-import Phaser from 'phaser';
+import { logDebug, logInfo, logWarn, logError } from './Logger';
+import { IBounds, IBackgroundBounds } from '../objects/types';
+import { IResponsiveObserver, IResponsiveSubject } from './IResponsiveObserver';
 
+// Legacy types for backward compatibility
 export type Range = { min?: number; max?: number };
 export type RespCondition = { width?: Range; height?: Range; aspect?: Range; dpr?: Range; };
 export type Transform = { scale?: number; x?: number; y?: number; visible?: boolean; maxParticles?: number; };
@@ -16,81 +18,279 @@ export type ResponsiveConfig = {
     fallbackScale?: { min: number; max: number };
 };
 
-type ObjMap = Record<string, Phaser.GameObjects.GameObject>;
+/**
+ * ResponsiveManager handles responsive scaling and positioning of game objects
+ * using the Observer pattern for clean, decoupled responsive behavior
+ */
+export class ResponsiveManager implements IResponsiveSubject {
+    private scene: Phaser.Scene;
+    private observers: IResponsiveObserver[] = [];
+    private backgroundBounds: IBackgroundBounds | null = null;
+    private lastScale: number = 1;
+    private lastBounds: IBounds | null = null;
 
-export class ResponsiveManager {
-    private current?: Profile;
-    private applying = false;
-
-    constructor(private scene: Phaser.Scene, private objects: ObjMap, private cfg: ResponsiveConfig) { }
-
-    apply = () => {
-        if (this.applying) return;            // 🔒 prevent recursive entry
-        this.applying = true;
-        try {
-            const vw = (this.scene.scale.parent as HTMLDivElement)?.clientWidth || window.innerWidth;
-            const vh = (this.scene.scale.parent as HTMLDivElement)?.clientHeight || window.innerHeight;
-            const aspect = vw / Math.max(1, vh);
-            const dpr = window.devicePixelRatio || 1;
-
-            const next = this.pick({ vw, vh, aspect, dpr });
-
-            // ✅ only resize if actually different to avoid triggering resize events unnecessarily
-            if (next?.canvas) {
-                const cw = next.canvas.width, ch = next.canvas.height;
-                if (cw !== this.scene.scale.width || ch !== this.scene.scale.height) {
-                    this.scene.scale.resize(cw, ch);
-                }
-            }
-
-            if (!this.current || this.current.name !== next?.name) {
-                next ? this.applyLayerSet(next) : this.fallbackScale(vw, vh);
-                this.current = next;
-            } else if (next) {
-                this.applyLayerSet(next);
-            }
-        } finally {
-            this.applying = false;              // 🔓 release
-        }
-    };
-
-    private pick(s: { vw: number; vh: number; aspect: number; dpr: number }): Profile | undefined {
-        const inR = (r?: Range, v?: number) => !r || ((r.min == null || v! >= r.min) && (r.max == null || v! <= r.max));
-        return [...this.cfg.profiles].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0))
-            .find(p => inR(p.condition.width, s.vw) && inR(p.condition.height, s.vh) && inR(p.condition.aspect, s.aspect) && inR(p.condition.dpr, s.dpr));
+    constructor(scene: Phaser.Scene) {
+        this.scene = scene;
+        logInfo('ResponsiveManager', 'Initialized', {
+            sceneName: scene.scene.key,
+            note: "Ready to handle responsive scaling using Observer pattern"
+        }, 'constructor');
     }
 
-    private applyLayerSet(p: Profile) {
-        for (const [layer, t] of Object.entries(p.layers)) {
-            const ids = this.cfg.groups[layer] || [];
-            for (const id of ids) {
-                const go = this.objects[id]; if (!go) continue;
-                if (t.visible != null) (go as any).setVisible?.(t.visible);
-                if (typeof t.x === 'number') (go as any).x = t.x;
-                if (typeof t.y === 'number') (go as any).y = t.y;
-                if (typeof t.scale === 'number') (go as any).setScale?.(t.scale);
-
-                const body = (go as any).body;
-                if (body && body instanceof Phaser.Physics.Arcade.StaticBody) body.updateFromGameObject();
-            }
-            if (t.maxParticles != null) this.scene.events.emit('FX_SET_MAX_PARTICLES', t.maxParticles);
+    /**
+     * Attach an observer to receive resize notifications
+     */
+    attach(observer: IResponsiveObserver): void {
+        if (!this.observers.includes(observer)) {
+            this.observers.push(observer);
+            logDebug('ResponsiveManager', 'Observer attached', {
+                observerId: observer.getObserverId(),
+                totalObservers: this.observers.length
+            }, 'attach');
         }
     }
 
-    private fallbackScale(vw: number, vh: number) {
-        const cw = this.scene.scale.width, ch = this.scene.scale.height;
-        const s = Math.min(vw / cw, vh / ch);
-        const k = Math.max(this.cfg.fallbackScale?.min ?? 0.5, Math.min(this.cfg.fallbackScale?.max ?? 1.2, s));
-        const ids = new Set(Object.values(this.cfg.groups).flat());
-        const all = ids.size ? [...ids] : Object.keys(this.objects);
-        for (const id of all) {
-            // Skip footer objects to prevent text distortion
-            if (id === 'footer' || id === 'footer-bg' || id === 'footer-text') continue;
+    /**
+     * Detach an observer from resize notifications
+     */
+    detach(observer: IResponsiveObserver): void {
+        const index = this.observers.indexOf(observer);
+        if (index > -1) {
+            this.observers.splice(index, 1);
+            logDebug('ResponsiveManager', 'Observer detached', {
+                observerId: observer.getObserverId(),
+                totalObservers: this.observers.length
+            }, 'detach');
+        }
+    }
+
+    /**
+     * Notify all observers of a resize event
+     */
+    notify(scale: number, bounds: IBounds): void {
+        logDebug('ResponsiveManager', 'Notifying observers', {
+            scale,
+            bounds,
+            observerCount: this.observers.length
+        }, 'notify');
+
+        this.observers.forEach(observer => {
+            try {
+                observer.onResize(scale, bounds);
+            } catch (error) {
+                logError('ResponsiveManager', 'Error notifying observer', {
+                    observerId: observer.getObserverId(),
+                    error
+                }, 'notify');
+            }
+        });
+    }
+
+    /**
+     * Get the current number of attached observers
+     */
+    getObserverCount(): number {
+        return this.observers.length;
+    }
+
+    /**
+     * Get background bounds for positioning calculations
+     */
+    getBackgroundBounds(): IBackgroundBounds | null {
+        if (!this.backgroundBounds) {
+            const bg = this.scene.children.getByName('bg');
+            logDebug('ResponsiveManager', 'Looking for background object', {
+                found: !!bg,
+                bgName: bg?.name,
+                bgType: bg?.constructor?.name,
+                hasGetBackgroundBounds: !!(bg && (bg as any).getBackgroundBounds)
+            }, 'getBackgroundBounds');
             
-            const go = this.objects[id];
-            (go as any).setScale?.(k);
-            const body = (go as any).body;
-            if (body && body instanceof Phaser.Physics.Arcade.StaticBody) body.updateFromGameObject();
+            if (bg && (bg as any).getBackgroundBounds) {
+                // Use the background object's own getBackgroundBounds method
+                this.backgroundBounds = (bg as any).getBackgroundBounds();
+                logDebug('ResponsiveManager', 'Background bounds retrieved from object', {
+                    bounds: this.backgroundBounds
+                }, 'getBackgroundBounds');
+            } else if (bg) {
+                // Fallback to basic bounds if getBackgroundBounds is not available
+                const x = (bg as any).x;
+                const y = (bg as any).y;
+                const width = (bg as any).displayWidth;
+                const height = (bg as any).displayHeight;
+                
+                logDebug('ResponsiveManager', 'Using fallback bounds calculation', {
+                    x, y, width, height
+                }, 'getBackgroundBounds');
+                
+                this.backgroundBounds = {
+                    x, y, width, height,
+                    left: x,
+                    right: x + width,
+                    top: y,
+                    bottom: y + height,
+                    centerX: x + width / 2,
+                    centerY: y + height / 2,
+                    originalWidth: width,
+                    originalHeight: height,
+                    finalWidth: width,
+                    finalHeight: height
+                };
+            } else {
+                logWarn('ResponsiveManager', 'No background object found', {
+                    sceneChildren: this.scene.children.list.map(child => ({
+                        name: child.name,
+                        type: child.constructor?.name
+                    }))
+                }, 'getBackgroundBounds');
+            }
+        }
+        return this.backgroundBounds;
+    }
+
+    /**
+     * Apply responsive scaling to all registered observers
+     * This is the main method called when the screen resizes
+     */
+    apply(): void {
+        logInfo('ResponsiveManager', 'Applying responsive scaling', {
+            observerCount: this.observers.length,
+            screenDimensions: { width: this.scene.scale.width, height: this.scene.scale.height },
+            note: "Will notify all observers using Observer pattern"
+        }, 'apply');
+
+        // Get background bounds for scaling calculations
+        const bgBounds = this.getBackgroundBounds();
+        if (!bgBounds) {
+            logWarn('ResponsiveManager', 'No background bounds available', {
+                note: "Cannot calculate scaling without background bounds"
+            }, 'apply');
+            return;
+        }
+
+        // Calculate scale factor based on background image
+        const originalWidth = bgBounds.originalWidth || bgBounds.width;
+        const originalHeight = bgBounds.originalHeight || bgBounds.height;
+        const scaleX = bgBounds.width / originalWidth;
+        const scaleY = bgBounds.height / originalHeight;
+        const scale = Math.min(scaleX, scaleY); // Maintain aspect ratio
+
+        logDebug('ResponsiveManager', 'Calculated scale factor', {
+            backgroundBounds: bgBounds,
+            originalDimensions: { width: originalWidth, height: originalHeight },
+            currentDimensions: { width: bgBounds.width, height: bgBounds.height },
+            scaleFactors: { scaleX, scaleY, finalScale: scale },
+            note: "Using uniform scaling to maintain aspect ratio"
+        }, 'apply');
+
+        // Check if we need to notify observers (scale or bounds changed)
+        if (this.lastScale !== scale || this.lastBounds !== bgBounds) {
+            this.lastScale = scale;
+            this.lastBounds = bgBounds;
+            
+            // Notify all observers using the observer pattern
+            this.notify(scale, bgBounds);
+            
+            logInfo('ResponsiveManager', 'Responsive scaling applied successfully', {
+                scale: scale,
+                observerCount: this.observers.length,
+                note: "All observers have been notified of the resize event"
+            }, 'apply');
+        } else {
+            logDebug('ResponsiveManager', 'No changes detected', {
+                scale: scale,
+                note: "Scale and bounds unchanged, no notifications sent"
+            }, 'apply');
+        }
+    }
+
+    /**
+     * Get embers instances for debugging
+     */
+    getEmbersInstances(): any[] {
+        const instances: any[] = [];
+        
+        // Look for embers effects in the scene
+        this.scene.children.each((child: any) => {
+            if (child && child.name && child.name.includes('embers')) {
+                instances.push(child);
+            }
+        });
+        
+        logInfo('ResponsiveManager', 'Found embers instances', {
+            count: instances.length,
+            instances: instances.map(inst => inst.name),
+            note: "These can be used for manual testing"
+        }, 'getEmbersInstances');
+        
+        return instances;
+    }
+
+    /**
+     * Get all registered observers
+     */
+    getObservers(): IResponsiveObserver[] {
+        return [...this.observers];
+    }
+
+    /**
+     * Clear all observers
+     */
+    clearObservers(): void {
+        logInfo('ResponsiveManager', 'Clearing all observers', {
+            observerCount: this.observers.length
+        }, 'clearObservers');
+        
+        this.observers = [];
+    }
+
+    /**
+     * Get current scale factor
+     */
+    getCurrentScale(): number {
+        return this.lastScale;
+    }
+
+    /**
+     * Get current bounds
+     */
+    getCurrentBounds(): IBounds | null {
+        return this.lastBounds;
+    }
+
+    /**
+     * Debug method to log current background scaling information
+     */
+    debugBackgroundScaling(): void {
+        const bgBounds = this.getBackgroundBounds();
+        if (bgBounds) {
+            logInfo('ResponsiveManager', 'Background Scaling Debug Info', {
+                currentBounds: {
+                    x: bgBounds.x,
+                    y: bgBounds.y,
+                    width: bgBounds.width,
+                    height: bgBounds.height
+                },
+                originalDimensions: {
+                    width: bgBounds.originalWidth,
+                    height: bgBounds.originalHeight
+                },
+                finalDimensions: {
+                    width: bgBounds.finalWidth,
+                    height: bgBounds.finalHeight
+                },
+                calculatedScale: {
+                    scaleX: bgBounds.width / bgBounds.originalWidth,
+                    scaleY: bgBounds.height / bgBounds.originalHeight,
+                    uniformScale: Math.min(bgBounds.width / bgBounds.originalWidth, bgBounds.height / bgBounds.originalHeight)
+                },
+                screenDimensions: {
+                    width: this.scene.scale.width,
+                    height: this.scene.scale.height
+                }
+            }, 'debugBackgroundScaling');
+        } else {
+            logWarn('ResponsiveManager', 'No background bounds available for debugging', {}, 'debugBackgroundScaling');
         }
     }
 }

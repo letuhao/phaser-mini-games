@@ -1,308 +1,458 @@
-export type ObjectKind =
-    | 'background'
-    | 'image'
-    | 'sprite'
-    | 'tileSprite'
-    | 'rect'
-    | 'text'
+// Core interfaces following SOLID principles
+export interface IGameObject {
+    id: string;
+    type: string;
+    scene: Phaser.Scene;
+    destroy(): void;
+}
+
+export interface IScalable {
+    resize(scale: number, bounds?: IBounds): void;
+}
+
+export interface IPositionable {
+    setPosition(x: number, y: number): void;
+    getPosition(): { x: number; y: number };
+    x: number;
+    y: number;
+}
+
+export interface IVisible {
+    visible: boolean;
+    setVisible(visible: boolean): void;
+}
+
+export interface IBounds {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+
+// Extended bounds interface for background objects with scaling information
+export interface IBackgroundBounds extends IBounds {
+    left: number;
+    right: number;
+    top: number;
+    bottom: number;
+    centerX: number;
+    centerY: number;
+    originalWidth: number;
+    originalHeight: number;
+    finalWidth: number;
+    finalHeight: number;
+}
+
+// Collision & Physics interfaces
+export interface IHitBox {
+    getHitBox(): IBounds;
+    setHitBox(bounds: IBounds): void;
+    isCollidingWith(other: IHitBox): boolean;
+    getCollisionBounds(): IBounds;
+}
+
+export interface ICollision {
+    onCollisionEnter(other: IGameObject): void;
+    onCollisionStay(other: IGameObject): void;
+    onCollisionExit(other: IGameObject): void;
+    isCollisionEnabled: boolean;
+    setCollisionEnabled(enabled: boolean): void;
+}
+
+export interface IPhysics {
+    velocity: { x: number; y: number };
+    acceleration: { x: number; y: number };
+    mass: number;
+    friction: number;
+    gravity: number;
+    setVelocity(x: number, y: number): void;
+    setAcceleration(x: number, y: number): void;
+    applyForce(force: { x: number; y: number }): void;
+    updatePhysics(deltaTime: number): void;
+}
+
+// Motion & Animation interfaces
+export interface IMotion {
+    moveTo(x: number, y: number, duration?: number): void;
+    moveBy(dx: number, dy: number, duration?: number): void;
+    rotateTo(angle: number, duration?: number): void;
+    rotateBy(deltaAngle: number, duration?: number): void;
+    scaleTo(scale: number, duration?: number): void;
+    scaleBy(deltaScale: number, duration?: number): void;
+    stopMotion(): void;
+    isMoving: boolean;
+}
+
+export interface IAnimatable {
+    playAnimation(key: string, config?: any): void;
+    stopAnimation(): void;
+    pauseAnimation(): void;
+    resumeAnimation(): void;
+    setAnimationSpeed(speed: number): void;
+    getCurrentAnimation(): string | null;
+    isPlaying: boolean;
+    isPaused: boolean;
+}
+
+export interface ITweenable {
+    tweenTo(target: any, duration: number, ease?: string): void;
+    tweenBy(delta: any, duration: number, ease?: string): void;
+    stopTween(): void;
+    isTweening: boolean;
+}
+
+// Audio & Sound interfaces
+export interface ISound {
+    playSound(key: string, config?: any): void;
+    stopSound(): void;
+    pauseSound(): void;
+    resumeSound(): void;
+    setVolume(volume: number): void;
+    setLoop(loop: boolean): void;
+    isPlaying: boolean;
+    isPaused: boolean;
+}
+
+export interface IAudio {
+    volume: number;
+    mute: boolean;
+    setVolume(volume: number): void;
+    setMute(mute: boolean): void;
+    fadeIn(duration: number): void;
+    fadeOut(duration: number): void;
+}
+
+// Game Logic interfaces
+export interface IUpdateable {
+    update(deltaTime: number): void;
+    isActive: boolean;
+    setActive(active: boolean): void;
+}
+
+export interface IInteractable {
+    onPointerDown(pointer: any): void;
+    onPointerUp(pointer: any): void;
+    onPointerOver(pointer: any): void;
+    onPointerOut(pointer: any): void;
+    onPointerMove(pointer: any): void;
+    isInteractive: boolean;
+    setInteractive(interactive: boolean): void;
+}
+
+export interface IDamageable {
+    health: number;
+    maxHealth: number;
+    isAlive: boolean;
+    takeDamage(amount: number): void;
+    heal(amount: number): void;
+    onDeath(): void;
+    onDamage(amount: number): void;
+}
+
+// Container interfaces
+export interface IContainer extends IGameObject, IScalable, IPositionable, IVisible {
+    children: IGameObject[];
+    addChild(child: IGameObject): void;
+    removeChild(child: IGameObject): void;
+    getChildAt(index: number): IGameObject | null;
+    getChildCount(): number;
+}
+
+// UI interfaces
+export interface IUIObject extends IGameObject, IScalable, IPositionable, IVisible, IInteractable {
+    enable(): void;
+    disable(): void;
+    isEnabled: boolean;
+}
+
+export interface IButtonObject extends IUIObject, ISound {
+    onClick: () => void;
+    setEnabled(enabled: boolean): void;
+    setText(text: string): void;
+    setIcon(iconKey: string): void;
+    setBackgroundColor(color: number): void;
+    setBorderColor(color: number): void;
+}
+
+export interface ITextObject extends IUIObject {
+    setText(text: string): void;
+    setFontSize(size: string): void;
+    setColor(color: string): void;
+    text: string;
+}
+
+// Effect interfaces
+export interface IEffectObject extends IGameObject, IScalable, IUpdateable {
+    start(): void;
+    stop(): void;
+    pause(): void;
+    resume(): void;
+    isActive: boolean;
+    isPaused: boolean;
+}
+
+export interface IParticleEffect extends IEffectObject, IUpdateable {
+    setSpawnArea(area: IBounds): void;
+    setParticleCount(count: number): void;
+    setBudget(budget: number): void;
+}
+
+// Spawn area interfaces
+export interface ISpawnArea extends IContainer, IUpdateable {
+    effectType: string;
+    margin: number;
+    density: number;
+    setEffectType(effectType: string): void;
+    setMargin(margin: number): void;
+    setDensity(density: number): void;
+}
+
+// Image and sprite interfaces
+export interface IImageObject extends IGameObject, IScalable, IPositionable, IVisible, IHitBox {
+    setTexture(key: string): void;
+    setScale(scale: number): void;
+    setAlpha(alpha: number): void;
+    textureKey: string;
+}
+
+export interface ISpriteObject extends IImageObject, IAnimatable {
+    setFrame(frameKey: string): void;
+    frameKey?: string;
+}
+
+export interface ITileSpriteObject extends IImageObject {
+    setTilePosition(x: number, y: number): void;
+}
+
+// Rectangle interface
+export interface IRectObject extends IGameObject, IScalable, IPositionable, IVisible, IHitBox {
+    setSize(width: number, height: number): void;
+    setFillColor(color: number): void;
+    setBorderColor(color: number): void;
+    setAlpha(alpha: number): void;
+    width: number;
+    height: number;
+    fillColor?: number;
+    borderColor?: number;
+}
+
+// Background interface
+export interface IBackgroundObject extends IGameObject, IScalable, IPositionable, IVisible {
+    setTexture(key: string): void;
+    setFitMode(mode: 'contain' | 'cover' | 'fill'): void;
+    setTile(tile: boolean): void;
+    textureKey?: string;
+    fitMode?: 'contain' | 'cover' | 'fill';
+    tile?: boolean;
+}
+
+// Object types that can be created
+export type ObjectKind = 
+    | 'background' 
+    | 'container' 
+    | 'effect' 
+    | 'button' 
+    | 'image' 
+    | 'sprite' 
+    | 'tileSprite' 
+    | 'rect' 
+    | 'text' 
+    | 'spawn-area'
     | 'leaves'
     | 'ground'
     | 'rain'
     | 'water'
     | 'sunrays'
     | 'sun'
-    | 'lensflare'
-    | 'container'
-    | 'button'
-    | 'effect';
+    | 'lensflare';
 
-export type RectHitArea = { kind: 'rect'; width: number; height: number; originCenter?: boolean };
-
-export type BaseObject = {
-    id?: string;
+// Configuration types (for data, not game objects)
+export interface BaseObjectConfig {
     type: ObjectKind;
+    id: string;
+    z?: number;
     x?: number;
     y?: number;
-    z?: number;          // display depth (Phaser's z-order)
-    origin?: number | { x: number; y: number };
-    angle?: number;
-    alpha?: number;
-    scale?: number | { x: number; y: number };
-    visible?: boolean;
-    props?: Record<string, any>;
-};
-
-export interface ContainerObject extends BaseObject {
-    type: 'container';
-    children?: BaseObject[];  // allow nested visuals
-    hitArea?: RectHitArea;    // 👈 optional group-level input from config
-    interactive?: boolean;    // quick flag: enable interaction if hitArea provided
-    cursor?: 'pointer' | 'default';
-}
-
-export type BackgroundObject = BaseObject & {
-    type: 'background';
-    // Either a solid fill or a texture
-    fill?: number;              // 0xRRGGBB
-    fillAlpha?: number;         // 0..1
-    textureKey?: string;        // if provided, will stretch to canvas
-    tile?: boolean;             // use TileSprite if true
-    /** How to fit the texture into the canvas (when textureKey provided). Default: 'stretch' */
-    fit?: 'stretch' | 'contain' | 'cover';
-};
-
-export type ImageObject = BaseObject & {
-    type: 'image';
-    key: string;
-    frame?: string | number;
-};
-
-export type SpriteObject = BaseObject & {
-    type: 'sprite';
-    key: string;
-    frame?: string | number;
-    anim?: string;              // optional animation key to play
-    loop?: boolean;
-};
-
-export type TileSpriteObject = BaseObject & {
-    type: 'tileSprite';
-    key: string;
     width?: number;
     height?: number;
-    tileScale?: number | { x: number; y: number };
-    scroll?: { x?: number; y?: number }; // for simple parallax scrolling
-};
-
-export type RectObject = BaseObject & {
-    type: 'rect';
-    width: number;
-    height: number;
-    fill: number;               // 0xRRGGBB
-    fillAlpha?: number;
-    radius?: number;            // rounded rectangle
-    stroke?: { color: number; width?: number; alpha?: number };
-};
-
-export type TextObject = BaseObject & {
-    type: 'text';
-    text: string;
-    style?: Phaser.Types.GameObjects.Text.TextStyle;
-};
-
-export type ButtonObject = BaseObject & {
-    type: 'button';
-    width: number;
-    height: number;
-    shape: 'rectangle' | 'circle';
-    displayMode: 'text' | 'icon' | 'both';
+    fill?: number;
+    alpha?: number;
+    visible?: boolean;
+    scale?: number | { x: number; y: number };
+    origin?: { x: number; y: number };
+    effectType?: string;
     text?: string;
-    icon?: string;
+    shape?: string;
+    count?: number;
+    budget?: number;
+    debugSpawnArea?: boolean;
+    margin?: number;
+    density?: number;
     backgroundColor?: number;
     borderColor?: number;
-    textColor?: string;
-    iconColor?: number;
-    fontSize?: string;
-    fontFamily?: string;
     hoverScale?: number;
     clickScale?: number;
     hoverTint?: number;
     clickTint?: number;
-    hoverSound?: string;
-    clickSound?: string;
-    
-    // Background image support
     backgroundImage?: string;
-    backgroundImageScale?: 'fit' | 'fill' | 'stretch';
+    backgroundImageScale?: string;
     backgroundImageOrigin?: { x: number; y: number };
+    onClick?: () => void;
+    style?: any;
+    embers?: any;
+    dock?: 'top' | 'bottom' | 'left' | 'right' | 'center';
+    anchor?: 'top-left' | 'top-center' | 'top-right' | 'center-left' | 'center' | 'center-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';
+    followBackground?: boolean;
+    displayMode?: 'text' | 'icon' | 'both';
+    children?: BaseObjectConfig[];
     
-    onClick?: string | (() => void);
-};
-
-export type LeavesObject = BaseObject & {
-    type: 'leaves';
-    options?: import('../effects/AutumnLeaves').LeavesOptions;
-};
-
-export type GroundObject = BaseObject & {
-    type: 'ground';
-    width: number;
-    height: number;
-    color?: number;
-    alpha?: number;
-    immovable?: boolean; // arcade static by default
-};
-
-export type RainObject = BaseObject & {
-    type: 'rain';
-    options?: import('../effects/Rain').RainOptions;
-};
-
-export type WaterSurfaceObject = BaseObject & {
-    type: 'water';
-    width?: number;                // defaults to scene width
-    options?: import('../effects/WaterSurface').WaterSurfaceOptions;
-};
-
-export type SunRaysObject = BaseObject & {
-    type: 'sunrays';
-    options?: import('../effects/SunRays').SunRaysOptions;
-};
-
-// --- SUN ---
-export type SunObject = BaseObject & {
-    type: 'sun';
-    /** If you omit x/y on the object, it will use options.static at runtime. */
-    options?: {
-        radius?: number;          // main disc radius
-        color?: number;           // main disc color
-        alpha?: number;           // main disc alpha
-        glow?: { radius?: number; alpha?: number; color?: number }; // additive halo
-
-        // Motion
-        mode?: 'static' | 'linear' | 'circle';
-
-        // NEW: pin sun to a screen corner (overrides mode if set)
-        pinTo?: { corner: 'tl' | 'tr' | 'bl' | 'br'; offsetX?: number; offsetY?: number };
-
-        static?: { x: number; y: number }; // used when mode:'static'
-
-        linear?: {
-            from: { x: number; y: number };
-            to: { x: number; y: number };
-            duration?: number; // ms
-            yoyo?: boolean;
-            repeat?: -1 | number;
-            ease?: string;     // Phaser ease name
-        };
-
-        circle?: {
-            cx: number; cy: number; r: number;
-            angularSpeedDeg?: number; // deg/s (+ clockwise)
-            phaseDeg?: number;        // start angle
-            clockwise?: boolean;
-        };
-
-        flicker?: { amp?: number; freq?: number }; // subtle brightness flicker
-
-        // NEW: animated AURA ring
-        aura?: {
-            enabled?: boolean;
-            rate?: number;                   // spawns/sec
-            life?: { min: number; max: number };
-            radius?: { min: number; max: number }; // base outer radius (px), ~around glow
-            thickness?: { min: number; max: number };
-            edges?: { min: number; max: number };   // polygon vertices
-            jitter?: number;                 // 0..1 radial wobble
-            color?: number;
-            alpha?: { min: number; max: number };
-            rotDegPerSec?: { min: number; max: number };
-            blend?: 'add' | 'screen';
-        };
-
-        // NEW: surface speckle
-        spackle?: {
-            enabled?: boolean;
-            rate?: number;
-            maxAlive?: number;
-            size?: { min: number; max: number };
-            life?: { min: number; max: number };
-            brightenChance?: number;
-            brightColor?: number;
-            darkColor?: number;
-            alpha?: { min: number; max: number };
-            textureKey?: string;
-
-            // NEW:
-            autoCenter?: boolean;                 // default true
-            contentOffset?: { x: number; y: number }; // manual px override (after scaling)
-            clampToDisk?: boolean;                // default true (cap to 2*radius)
-            textureKeys?: string[];               // if you want a pool of textures
-        };
+    // New game engine properties
+    hitBox?: IBounds;
+    collision?: boolean;
+    physics?: {
+        mass?: number;
+        friction?: number;
+        gravity?: number;
     };
-};
+    motion?: {
+        velocity?: { x: number; y: number };
+        acceleration?: { x: number; y: number };
+    };
+    sound?: {
+        key?: string;
+        volume?: number;
+        loop?: boolean;
+    };
+    animation?: {
+        key?: string;
+        speed?: number;
+        loop?: boolean;
+    };
+    interaction?: boolean;
+    health?: number;
+    maxHealth?: number;
+}
 
-export type LensFlareObject = BaseObject & {
-    type: 'lensflare';
-    options?: import('../effects/LensFlare').LensFlareOptions & { sourceId?: string };
-};
+// Specialized configuration interfaces
+export interface BackgroundObjectConfig extends BaseObjectConfig {
+    type: 'background';
+    textureKey?: string;
+    tile?: boolean;
+    fit?: 'contain' | 'cover' | 'fill';
+}
 
-export type EffectObject = BaseObject & {
+export interface ContainerObjectConfig extends BaseObjectConfig {
+    type: 'container';
+}
+
+export interface EffectObjectConfig extends BaseObjectConfig {
     type: 'effect';
-    effectType: 'embers' | 'fireflies' | 'starGrow' | 'autumnLeaves' | 'rain' | 'wind' | 'lensFlare' | 'waterSurface';
-    // Common effect properties
-    count?: number;                  // how many particles in the pool
-    area?: { w: number; h: number }; // spawn area dimensions (legacy)
-    spawnArea?: { x: number; y: number; width: number; height: number }; // exact spawn rectangle within container
-    baseY?: number;                  // base Y position for spawning (legacy)
-    budget?: number;                 // how many particles are active at once
-    debugSpawnArea?: boolean;        // show spawn area rectangle for debugging
-    
-    // Embers-specific properties
     embers?: {
-        // Size customization
-        scale?: {
-            min?: number;            // Minimum scale (0.1 - 2.0)
-            max?: number;            // Maximum scale (0.1 - 2.0)
-        };
-        
-        // Color customization
-        colors?: number[];           // Array of hex colors for embers
-        colorBlend?: boolean;        // Whether to blend between colors
-        
-        // Animation customization
-        rise?: {
-            min?: number;            // Minimum rise distance (px)
-            max?: number;            // Maximum rise distance (px)
-        };
-        duration?: {
-            min?: number;            // Minimum animation duration (ms)
-            max?: number;            // Maximum animation duration (ms)
-        };
-        sway?: {
-            min?: number;            // Minimum horizontal sway (px)
-            max?: number;            // Maximum horizontal sway (px)
-        };
-        
-        // Visual effects
-        alpha?: {
-            min?: number;            // Minimum alpha (0.0 - 1.0)
-            max?: number;            // Maximum alpha (0.0 - 1.0)
-        };
-        blendMode?: 'add' | 'screen' | 'multiply' | 'normal'; // Blend mode for embers
-        
-        // Physics simulation
-        gravity?: number;            // Gravity effect (negative = upward drift)
-        wind?: number;               // Wind effect (positive = rightward drift)
-        
-        // Texture customization
+        scale?: { min: number; max: number };
+        colors?: number[];
+        colorBlend?: boolean;
+        rise?: { min: number; max: number };
+        duration?: { min: number; max: number };
+        sway?: { min: number; max: number };
+        alpha?: { min: number; max: number };
+        blendMode?: string;
+        gravity?: number;
+        wind?: number;
         texture?: {
-            key?: string;            // Custom texture key
-            size?: number;           // Texture size (px)
-            shape?: 'circle' | 'square' | 'star' | 'diamond'; // Texture shape
+            key?: string;
+            size?: number;
+            shape?: 'circle' | 'square' | 'star' | 'diamond';
         };
     };
-    
-    // Additional effect-specific properties can be added here
-};
+}
 
-export type SceneObject =
-    | BackgroundObject
-    | ImageObject
-    | SpriteObject
-    | TileSpriteObject
-    | RectObject
-    | TextObject
-    | LeavesObject
-    | GroundObject
-    | RainObject
-    | WaterSurfaceObject
-    | SunRaysObject
-    | SunObject
-    | LensFlareObject
-    | ContainerObject
-    | ButtonObject
-    | EffectObject
-    ;
+export interface SpawnAreaObjectConfig extends BaseObjectConfig {
+    type: 'spawn-area';
+}
 
-export type ObjectsConfig = SceneObject[];
+export interface ButtonObjectConfig extends BaseObjectConfig {
+    type: 'button';
+}
+
+export interface TextObjectConfig extends BaseObjectConfig {
+    type: 'text';
+}
+
+export interface RectObjectConfig extends BaseObjectConfig {
+    type: 'rect';
+}
+
+export interface ImageObjectConfig extends BaseObjectConfig {
+    type: 'image';
+    textureKey: string;
+}
+
+export interface SpriteObjectConfig extends BaseObjectConfig {
+    type: 'sprite';
+    textureKey: string;
+    frameKey?: string;
+}
+
+export interface TileSpriteObjectConfig extends BaseObjectConfig {
+    type: 'tileSprite';
+    textureKey: string;
+}
+
+// Additional configuration types for backward compatibility
+export interface LeavesObjectConfig extends BaseObjectConfig {
+    type: 'leaves';
+    options?: any;
+}
+
+export interface GroundObjectConfig extends BaseObjectConfig {
+    type: 'ground';
+}
+
+export interface RainObjectConfig extends BaseObjectConfig {
+    type: 'rain';
+    options?: any;
+}
+
+export interface WaterSurfaceObjectConfig extends BaseObjectConfig {
+    type: 'water';
+    options?: any;
+}
+
+export interface SunRaysObjectConfig extends BaseObjectConfig {
+    type: 'sunrays';
+    options?: any;
+}
+
+export interface SunObjectConfig extends BaseObjectConfig {
+    type: 'sun';
+    options?: any;
+}
+
+export interface LensFlareObjectConfig extends BaseObjectConfig {
+    type: 'lensflare';
+    options?: any;
+}
+
+// Union type for all configuration objects
+export type ObjectsConfig = Array<
+    | BackgroundObjectConfig
+    | ContainerObjectConfig
+    | EffectObjectConfig
+    | ButtonObjectConfig
+    | ImageObjectConfig
+    | SpriteObjectConfig
+    | TileSpriteObjectConfig
+    | RectObjectConfig
+    | TextObjectConfig
+    | SpawnAreaObjectConfig
+    | LeavesObjectConfig
+    | GroundObjectConfig
+    | RainObjectConfig
+    | WaterSurfaceObjectConfig
+    | SunRaysObjectConfig
+    | SunObjectConfig
+    | LensFlareObjectConfig
+>;
+
+// Legacy type for backward compatibility
+export type SceneObject = ObjectsConfig[number];

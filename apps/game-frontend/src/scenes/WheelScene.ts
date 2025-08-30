@@ -1,40 +1,28 @@
 import Phaser from 'phaser';
-import { loadObjects } from '../objects/ObjectLoader';
-import { DemoObjects } from '../objects/demoConfig';
+import { ObjectLoader } from '../objects/ObjectLoader';
+import { logInfo, logDebug } from '../core/Logger';
 
 export class WheelScene extends Phaser.Scene {
-  private objects!: ReturnType<typeof loadObjects>;
-
-  constructor() { super('Wheel'); }
-
-  preload() {
-    this.load.setPath('/');
-
-    this.load.image(
-      'sun-speckle1',
-      'assets/textures/sun-speckles/speckle1.png'
-    );
-  }
-
-  create() {
-    const made = loadObjects(this, DemoObjects);
-
-    // size ground to canvas bottom
-    const ground = this.children.getByName('ground') as Phaser.GameObjects.Rectangle;
-    if (ground) {
-      const body = ground.body as Phaser.Physics.Arcade.StaticBody;
-      const resizeGround = () => {
-        const h = this.scale.height;
-        ground.setPosition(0, h - 12);          // bottom
-        ground.setDisplaySize(this.scale.width, 12);
-        ground.setSize(this.scale.width, 12);   // collider
-        body.updateFromGameObject();
-      };
-      resizeGround();
-      this.scale.on('resize', resizeGround);
-
-      // DEBUG: make it faintly visible
-      ground.setFillStyle(0x00ff00, 0.2);
+    private objects: Record<string, Phaser.GameObjects.GameObject> = {};
+    private objectLoader: ObjectLoader;
+    
+    constructor() {
+        super({ key: 'WheelScene' });
+        this.objectLoader = new ObjectLoader();
     }
-  }
+    
+    create() {
+        logInfo('WheelScene', 'Starting scene creation', undefined, 'create');
+        
+        // Load objects using the new ObjectLoader
+        this.objects = this.objectLoader.loadObjects(this, this.getObjectsConfig());
+        
+        logInfo('WheelScene', 'Scene creation completed', undefined, 'create');
+    }
+    
+    private getObjectsConfig() {
+        // This would come from your configuration file
+        // For now, returning an empty array as placeholder
+        return [];
+    }
 }
