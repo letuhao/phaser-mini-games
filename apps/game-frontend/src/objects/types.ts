@@ -27,20 +27,35 @@ export interface IBounds {
     y: number;
     width: number;
     height: number;
-}
-
-// Extended bounds interface for background objects with scaling information
-export interface IBackgroundBounds extends IBounds {
     left: number;
     right: number;
     top: number;
     bottom: number;
     centerX: number;
     centerY: number;
+}
+
+// Extended bounds interface for background objects with scaling information
+export interface IBackgroundBounds extends IBounds {
     originalWidth: number;
     originalHeight: number;
     finalWidth: number;
     finalHeight: number;
+    
+    // Container bounds (Phaser Container that follows image)
+    containerLeft: number;
+    containerRight: number;
+    containerTop: number;
+    containerBottom: number;
+    containerWidth: number;
+    containerHeight: number;
+    containerCenterX: number;
+    containerCenterY: number;
+    
+    // Background properties
+    fitMode?: 'contain' | 'cover' | 'fill';
+    tile?: boolean;
+    textureKey?: string;
 }
 
 // Collision & Physics interfaces
@@ -83,8 +98,50 @@ export interface IMotion {
     isMoving: boolean;
 }
 
+// ============================================================================
+// ANIMATION & TWEEN CONFIGURATIONS
+// ============================================================================
+
+export interface IAnimationConfig {
+    key: string;
+    frameRate?: number;
+    repeat?: number;
+    yoyo?: boolean;
+    duration?: number;
+}
+
+export interface ITweenTarget {
+    x?: number;
+    y?: number;
+    scale?: number;
+    alpha?: number;
+    angle?: number;
+}
+
+export interface ISoundConfig {
+    volume?: number;
+    loop?: boolean;
+    rate?: number;
+    detune?: number;
+    seek?: number;
+    fadeIn?: number;
+    fadeOut?: number;
+}
+
+export interface IPointerData {
+    x: number;
+    y: number;
+    button?: number;
+    id?: number;
+    isTouch?: boolean;
+}
+
+// ============================================================================
+// GAME OBJECT INTERFACES
+// ============================================================================
+
 export interface IAnimatable {
-    playAnimation(key: string, config?: any): void;
+    playAnimation(key: string, config?: IAnimationConfig): void;
     stopAnimation(): void;
     pauseAnimation(): void;
     resumeAnimation(): void;
@@ -95,15 +152,15 @@ export interface IAnimatable {
 }
 
 export interface ITweenable {
-    tweenTo(target: any, duration: number, ease?: string): void;
-    tweenBy(delta: any, duration: number, ease?: string): void;
+    tweenTo(target: ITweenTarget, duration: number, ease?: string): void;
+    tweenBy(delta: ITweenTarget, duration: number, ease?: string): void;
     stopTween(): void;
     isTweening: boolean;
 }
 
 // Audio & Sound interfaces
 export interface ISound {
-    playSound(key: string, config?: any): void;
+    playSound(key: string, config?: ISoundConfig): void;
     stopSound(): void;
     pauseSound(): void;
     resumeSound(): void;
@@ -130,11 +187,11 @@ export interface IUpdateable {
 }
 
 export interface IInteractable {
-    onPointerDown(pointer: any): void;
-    onPointerUp(pointer: any): void;
-    onPointerOver(pointer: any): void;
-    onPointerOut(pointer: any): void;
-    onPointerMove(pointer: any): void;
+    onPointerDown(pointer: IPointerData): void;
+    onPointerUp(pointer: IPointerData): void;
+    onPointerOver(pointer: IPointerData): void;
+    onPointerOut(pointer: IPointerData): void;
+    onPointerMove(pointer: IPointerData): void;
     isInteractive: boolean;
     setInteractive(interactive: boolean): void;
 }
@@ -237,13 +294,18 @@ export interface IRectObject extends IGameObject, IScalable, IPositionable, IVis
 }
 
 // Background interface
-export interface IBackgroundObject extends IGameObject, IScalable, IPositionable, IVisible {
+export interface IBackgroundObject extends IGameObject, IScalable, IPositionable, IVisible, IContainer {
     setTexture(key: string): void;
     setFitMode(mode: 'contain' | 'cover' | 'fill'): void;
     setTile(tile: boolean): void;
     textureKey?: string;
     fitMode?: 'contain' | 'cover' | 'fill';
     tile?: boolean;
+    
+    // Container-specific methods for backgrounds
+    getBackgroundBounds(): IBackgroundBounds;
+    getImageBounds(): IBounds;
+    getContainerBounds(): IBounds;
 }
 
 // Object types that can be created
@@ -267,6 +329,21 @@ export type ObjectKind =
     | 'lensflare';
 
 // Configuration types (for data, not game objects)
+export interface IStyleConfig {
+    color?: string | number;
+    backgroundColor?: string | number;
+    borderColor?: string | number;
+    borderWidth?: number;
+    borderRadius?: number;
+    padding?: number | { top: number; right: number; bottom: number; left: number };
+    margin?: number | { top: number; right: number; bottom: number; left: number };
+    fontFamily?: string;
+    fontSize?: string | number;
+    fontWeight?: string | number;
+    textAlign?: 'left' | 'center' | 'right';
+    lineHeight?: number;
+}
+
 export interface BaseObjectConfig {
     type: ObjectKind;
     id: string;
@@ -298,8 +375,8 @@ export interface BaseObjectConfig {
     backgroundImageScale?: string;
     backgroundImageOrigin?: { x: number; y: number };
     onClick?: () => void;
-    style?: any;
-    embers?: any;
+    style?: IStyleConfig;
+    embers?: Record<string, unknown>;
     dock?: 'top' | 'bottom' | 'left' | 'right' | 'center';
     anchor?: 'top-left' | 'top-center' | 'top-right' | 'center-left' | 'center' | 'center-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';
     followBackground?: boolean;
@@ -339,6 +416,8 @@ export interface BackgroundObjectConfig extends BaseObjectConfig {
     textureKey?: string;
     tile?: boolean;
     fit?: 'contain' | 'cover' | 'fill';
+    fill?: number;
+    fillAlpha?: number;
 }
 
 export interface ContainerObjectConfig extends BaseObjectConfig {
@@ -401,7 +480,7 @@ export interface TileSpriteObjectConfig extends BaseObjectConfig {
 // Additional configuration types for backward compatibility
 export interface LeavesObjectConfig extends BaseObjectConfig {
     type: 'leaves';
-    options?: any;
+    options?: Record<string, unknown>;
 }
 
 export interface GroundObjectConfig extends BaseObjectConfig {
@@ -410,27 +489,27 @@ export interface GroundObjectConfig extends BaseObjectConfig {
 
 export interface RainObjectConfig extends BaseObjectConfig {
     type: 'rain';
-    options?: any;
+    options?: Record<string, unknown>;
 }
 
 export interface WaterSurfaceObjectConfig extends BaseObjectConfig {
     type: 'water';
-    options?: any;
+    options?: Record<string, unknown>;
 }
 
 export interface SunRaysObjectConfig extends BaseObjectConfig {
     type: 'sunrays';
-    options?: any;
+    options?: Record<string, unknown>;
 }
 
 export interface SunObjectConfig extends BaseObjectConfig {
     type: 'sun';
-    options?: any;
+    options?: Record<string, unknown>;
 }
 
 export interface LensFlareObjectConfig extends BaseObjectConfig {
     type: 'lensflare';
-    options?: any;
+    options?: Record<string, unknown>;
 }
 
 // Union type for all configuration objects

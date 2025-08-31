@@ -14,48 +14,44 @@ import {
 } from './types';
 import { logDebug, logInfo } from '../core/Logger';
 
-export abstract class BaseGameObject implements IGameObject, IScalable, IPositionable, IVisible, IBounds {
+export abstract class BaseGameObject implements IGameObject, IScalable, IPositionable, IVisible {
     // Core properties
-    public readonly id: string;
-    public readonly type: string;
-    public readonly name: string;
-    
-    // Scene reference (required by IGameObject)
+    public id: string;
+    public type: string;
+    public name: string;
     public scene: Phaser.Scene;
+    
+    // Position properties
+    public x: number = 0;
+    public y: number = 0;
+    
+    // Size properties
+    public width: number = 0;
+    public height: number = 0;
+    
+    // Scale properties
+    public scale: number = 1;
+    
+    // State properties
+    public isActive: boolean = true;
+    
+    // Visibility properties
+    public visible: boolean = true;
     
     // Phaser game object reference
     protected phaserObject: Phaser.GameObjects.GameObject | null = null;
     
-    // State tracking
-    protected isActive: boolean = true;
-    protected isScalable: boolean = true;
-    
-    // Position and size (public as required by interfaces)
-    public x: number = 0;
-    public y: number = 0;
-    public width: number = 0;
-    public height: number = 0;
-    protected scale: number = 1;
-    
-    // Visible property (required by IVisible interface)
-    public visible: boolean = true;
-    
-    // Configuration
-    protected config: BaseObjectConfig;
-    
     constructor(config: BaseObjectConfig, scene: Phaser.Scene) {
         this.id = config.id;
         this.type = config.type;
-        this.name = config.id; // Use id as name since config.name doesn't exist
+        this.name = config.id; // Use id as name
         this.scene = scene;
-        this.config = config;
         
-        // Initialize position and size from config
         if (config.x !== undefined) this.x = config.x;
         if (config.y !== undefined) this.y = config.y;
         if (config.width !== undefined) this.width = config.width;
         if (config.height !== undefined) this.height = config.height;
-        
+        if (config.visible !== undefined) this.visible = config.visible;
         if (config.scale !== undefined) {
             if (typeof config.scale === 'number') {
                 this.scale = config.scale;
@@ -63,120 +59,64 @@ export abstract class BaseGameObject implements IGameObject, IScalable, IPositio
                 this.scale = config.scale.x; // Use x scale as default
             }
         }
-        
-        logDebug('BaseGameObject', `Created ${this.type} object: ${this.name}`, {
-            id: this.id,
-            type: this.type,
-            position: { x: this.x, y: this.y },
-            size: { width: this.width, height: this.height },
-            scale: this.scale
-        }, 'constructor');
     }
     
     // ============================================================================
     // IGameObject Implementation
     // ============================================================================
     
-    public getId(): string {
-        return this.id;
-    }
-    
-    public getType(): string {
-        return this.type;
-    }
-    
-    public getName(): string {
-        return this.name;
-    }
-    
-    public getConfig(): BaseObjectConfig {
-        return this.config;
-    }
-    
-    public isObjectActive(): boolean {
-        return this.isActive;
-    }
-    
-    public setObjectActive(active: boolean): void {
-        this.isActive = active;
+    public destroy(): void {
         if (this.phaserObject) {
-            this.phaserObject.setActive(active);
+            this.phaserObject.destroy();
+            this.phaserObject = null;
         }
-        logDebug('BaseGameObject', `Set object active: ${active}`, {
-            id: this.id,
-            name: this.name,
-            active
-        }, 'setObjectActive');
+        
+        this.isActive = false;
+        this.visible = false;
+        
+        logDebug('BaseGameObject', 'Object destroyed', { id: this.id, name: this.name }, 'destroy');
     }
     
     // ============================================================================
     // IScalable Implementation
     // ============================================================================
     
-    public resize(scale: number, bounds?: { x: number; y: number; width: number; height: number }): void {
-        if (!this.isScalable) {
-            logDebug('BaseGameObject', 'Object is not scalable, skipping resize', {
-                id: this.id,
-                name: this.name,
-                scale
-            }, 'resize');
-            return;
-        }
-        
-        const oldScale = this.scale;
+    public resize(scale: number, bounds?: IBounds): void {
         this.scale = scale;
+        
+        if (bounds) {
+            this.x = bounds.x;
+            this.y = bounds.y;
+            this.width = bounds.width;
+            this.height = bounds.height;
+        }
         
         // Apply scale to Phaser object if available
         if (this.phaserObject && 'setScale' in this.phaserObject) {
             (this.phaserObject as any).setScale(scale);
         }
         
-        // Update size if bounds provided
-        if (bounds) {
-            this.width = bounds.width;
-            this.height = bounds.height;
-        }
-        
-        logDebug('BaseGameObject', 'Object resized', {
-            id: this.id,
+        logDebug('BaseGameObject', 'Object resized', { 
+            id: this.id, 
             name: this.name,
-            oldScale,
-            newScale: this.scale,
-            size: { width: this.width, height: this.height }
+            scale, 
+            newBounds: bounds 
         }, 'resize');
-    }
-    
-    public getScale(): number {
-        return this.scale;
     }
     
     public setScale(scale: number): void {
         this.resize(scale);
     }
     
-    public isScalableObject(): boolean {
-        return this.isScalable;
-    }
-    
-    public setScalable(scalable: boolean): void {
-        this.isScalable = scalable;
-        logDebug('BaseGameObject', `Set scalable: ${scalable}`, {
-            id: this.id,
-            name: this.name,
-            scalable
-        }, 'setScalable');
+    public getScale(): number {
+        return this.scale;
     }
     
     // ============================================================================
     // IPositionable Implementation
     // ============================================================================
     
-    public getPosition(): { x: number; y: number } {
-        return { x: this.x, y: this.y };
-    }
-    
     public setPosition(x: number, y: number): void {
-        const oldPosition = { x: this.x, y: this.y };
         this.x = x;
         this.y = y;
         
@@ -185,20 +125,11 @@ export abstract class BaseGameObject implements IGameObject, IScalable, IPositio
             (this.phaserObject as any).setPosition(x, y);
         }
         
-        logDebug('BaseGameObject', 'Position updated', {
-            id: this.id,
-            name: this.name,
-            oldPosition,
-            newPosition: { x, y }
-        }, 'setPosition');
+        logDebug('BaseGameObject', 'Position set', { id: this.id, name: this.name, x, y }, 'setPosition');
     }
     
-    public getX(): number {
-        return this.x;
-    }
-    
-    public getY(): number {
-        return this.y;
+    public getPosition(): { x: number; y: number } {
+        return { x: this.x, y: this.y };
     }
     
     public setX(x: number): void {
@@ -213,32 +144,15 @@ export abstract class BaseGameObject implements IGameObject, IScalable, IPositio
     // IVisible Implementation
     // ============================================================================
     
-    public isObjectVisible(): boolean {
-        return this.visible;
-    }
-    
-    public setObjectVisible(visible: boolean): void {
-        this.visible = visible;
-        if (this.phaserObject && 'setVisible' in this.phaserObject) {
-            (this.phaserObject as any).setVisible(visible);
-        }
-        logDebug('BaseGameObject', `Set object visible: ${visible}`, {
-            id: this.id,
-            name: this.name,
-            visible
-        }, 'setObjectVisible');
-    }
-    
     public setVisible(visible: boolean): void {
         this.visible = visible;
+        
+        // Apply visibility to Phaser object if available
         if (this.phaserObject && 'setVisible' in this.phaserObject) {
             (this.phaserObject as any).setVisible(visible);
         }
-        logDebug('BaseGameObject', `Set object visible: ${visible}`, {
-            id: this.id,
-            name: this.name,
-            visible
-        }, 'setVisible');
+        
+        logDebug('BaseGameObject', 'Visibility set', { id: this.id, name: this.name, visible }, 'setVisible');
     }
     
     public show(): void {
@@ -253,25 +167,22 @@ export abstract class BaseGameObject implements IGameObject, IScalable, IPositio
     // IBounds Implementation
     // ============================================================================
     
-    public getBounds(): { x: number; y: number; width: number; height: number } {
+    public getBounds(): IBounds {
         return {
             x: this.x,
             y: this.y,
             width: this.width,
-            height: this.height
+            height: this.height,
+            left: this.x,
+            right: this.x + this.width,
+            top: this.y,
+            bottom: this.y + this.height,
+            centerX: this.x + (this.width / 2),
+            centerY: this.y + (this.height / 2)
         };
     }
     
-    public getWidth(): number {
-        return this.width;
-    }
-    
-    public getHeight(): number {
-        return this.height;
-    }
-    
     public setSize(width: number, height: number): void {
-        const oldSize = { width: this.width, height: this.height };
         this.width = width;
         this.height = height;
         
@@ -280,24 +191,12 @@ export abstract class BaseGameObject implements IGameObject, IScalable, IPositio
             (this.phaserObject as any).setSize(width, height);
         }
         
-        logDebug('BaseGameObject', 'Size updated', {
-            id: this.id,
-            name: this.name,
-            oldSize,
-            newSize: { width, height }
+        logDebug('BaseGameObject', 'Size set', { 
+            id: this.id, 
+            name: this.name, 
+            width, 
+            height 
         }, 'setSize');
-    }
-    
-    public containsPoint(x: number, y: number): boolean {
-        return x >= this.x && x <= this.x + this.width &&
-               y >= this.y && y <= this.y + this.height;
-    }
-    
-    public intersects(other: IBounds): boolean {
-        return !(this.x + this.width < other.x ||
-                other.x + other.width < this.x ||
-                this.y + this.height < other.y ||
-                other.y + other.height < this.y);
     }
     
     // ============================================================================
@@ -318,48 +217,42 @@ export abstract class BaseGameObject implements IGameObject, IScalable, IPositio
     }
     
     // ============================================================================
+    // State Management
+    // ============================================================================
+    
+    public setActive(active: boolean): void {
+        this.isActive = active;
+        
+        // Apply active state to Phaser object if available
+        if (this.phaserObject && 'setActive' in this.phaserObject) {
+            (this.phaserObject as any).setActive(active);
+        }
+        
+        logDebug('BaseGameObject', 'Active state set', { 
+            id: this.id, 
+            name: this.name, 
+            active 
+        }, 'setActive');
+    }
+    
+    // ============================================================================
     // Utility Methods
     // ============================================================================
     
-    public destroy(): void {
-        if (this.phaserObject) {
-            this.phaserObject.destroy();
-            this.phaserObject = null;
-        }
-        
-        this.isActive = false;
-        this.visible = false;
-        
-        logInfo('BaseGameObject', 'Object destroyed', {
-            id: this.id,
-            name: this.name
-        }, 'destroy');
+    public isVisible(): boolean {
+        return this.visible;
     }
     
-    public getStatus(): {
-        id: string;
-        name: string;
-        type: string;
-        isActive: boolean;
-        isVisible: boolean;
-        isScalable: boolean;
-        position: { x: number; y: number };
-        size: { width: number; height: number };
-        scale: number;
-        hasPhaserObject: boolean;
-    } {
-        return {
-            id: this.id,
-            name: this.name,
-            type: this.type,
-            isActive: this.isActive,
-            isVisible: this.visible,
-            isScalable: this.isScalable,
-            position: { x: this.x, y: this.y },
-            size: { width: this.width, height: this.height },
-            scale: this.scale,
-            hasPhaserObject: this.phaserObject !== null
-        };
+    public intersects(other: IBounds): boolean {
+        return !(this.x + this.width < other.x || 
+                other.x + other.width < this.x || 
+                this.y + this.height < other.y || 
+                other.y + other.height < this.y);
+    }
+    
+    public containsPoint(x: number, y: number): boolean {
+        return x >= this.x && x <= this.x + this.width &&
+               y >= this.y && y <= this.y + this.height;
     }
     
     // ============================================================================

@@ -199,8 +199,8 @@ export class AssetLoader {
      */
     private loadAtlasAsset(asset: AtlasAssetConfig): boolean {
         try {
-            if (asset.config?.dataURL && asset.config?.textureURL) {
-                this.scene.load.atlas(asset.key, asset.config.textureURL, asset.config.dataURL);
+            if (asset.config?.atlasURL && asset.config?.imageURL) {
+                this.scene.load.atlas(asset.key, asset.config.imageURL, asset.config.atlasURL);
             } else {
                 this.scene.load.atlas(asset.key, asset.url);
             }

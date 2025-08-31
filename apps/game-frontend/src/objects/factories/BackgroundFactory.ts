@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import { BaseGameObjectFactory } from './GameObjectFactory';
+import { Background } from '../Background';
+import { BackgroundObjectConfig } from '../types';
 import { logDebug, logInfo, logError } from '../../core/Logger';
 
 /**
@@ -8,8 +10,8 @@ import { logDebug, logInfo, logError } from '../../core/Logger';
 export class BackgroundFactory extends BaseGameObjectFactory {
     readonly supportedTypes = ['background'];
     
-    create(scene: Phaser.Scene, config: any): Phaser.GameObjects.GameObject | null {
-        logDebug('BackgroundFactory', 'Creating background', { config }, 'create');
+    create(scene: Phaser.Scene, config: BackgroundObjectConfig): Phaser.GameObjects.GameObject | null {
+        logDebug('BackgroundFactory', 'Creating background container', { config }, 'create');
         
         const w = scene.scale.width;
         const h = scene.scale.height;
@@ -19,7 +21,10 @@ export class BackgroundFactory extends BaseGameObjectFactory {
             screenHeight: h 
         }, 'create');
         
-        let obj: Phaser.GameObjects.GameObject;
+        // Create the Background container instance
+        const backgroundContainer = new Background(config, scene);
+        
+        let phaserObject: Phaser.GameObjects.GameObject;
         
         if (config.textureKey) {
             // Check if texture exists
@@ -32,80 +37,55 @@ export class BackgroundFactory extends BaseGameObjectFactory {
                 return null;
             }
             
-            logDebug('BackgroundFactory', 'Texture found, creating background', { 
+            logDebug('BackgroundFactory', 'Texture found, creating background image', { 
                 textureKey: config.textureKey,
                 textureExists: scene.textures.exists(config.textureKey)
             }, 'create');
             
             if (config.tile) {
                 const ts = scene.add.tileSprite(0, 0, w, h, config.textureKey).setOrigin(0, 0);
-                obj = ts;
+                phaserObject = ts;
             } else {
                 const img = scene.add.image(0, 0, config.textureKey).setOrigin(0.5, 0.5);
                 this.setupTextureFitting(scene, img, config);
-                obj = img;
+                phaserObject = img;
                 
-                // Add method to get background bounds
-                (obj as any).getBackgroundBounds = () => {
-                    const bounds = img.getBounds();
-                    const originalWidth = img.getData('originalWidth') || bounds.width;
-                    const originalHeight = img.getData('originalHeight') || bounds.height;
-                    const finalWidth = img.getData('finalWidth') || bounds.width;
-                    const finalHeight = img.getData('finalHeight') || bounds.height;
-                    
-                    logDebug('BackgroundFactory', 'Getting background bounds', {
-                        bounds: bounds,
-                        originalDimensions: { width: originalWidth, height: originalHeight },
-                        finalDimensions: { width: finalWidth, height: finalHeight }
-                    }, 'getBackgroundBounds');
-                    
-                    return {
-                        left: bounds.x,
-                        right: bounds.x + bounds.width,
-                        top: bounds.y,
-                        bottom: bounds.y + bounds.height,
-                        width: bounds.width,
-                        height: bounds.height,
-                        centerX: bounds.x + bounds.width / 2,
-                        centerY: bounds.y + bounds.height / 2,
-                        // Store original dimensions for scaling calculations
-                        originalWidth: originalWidth,
-                        originalHeight: originalHeight,
-                        finalWidth: finalWidth,
-                        finalHeight: finalHeight
-                    };
-                };
+                // Store original and final dimensions for scaling calculations
+                img.setData('originalWidth', img.width);
+                img.setData('originalHeight', img.height);
+                img.setData('finalWidth', img.width);
+                img.setData('finalHeight', img.height);
             }
         } else {
             // Solid fill using a full-screen rectangle
             const g = scene.add.rectangle(0, 0, w, h, config.fill ?? 0x000000, config.fillAlpha ?? 1).setOrigin(0, 0);
-            obj = g;
+            phaserObject = g;
         }
         
+        // Set the background image in the container
+        backgroundContainer.setBackgroundImage(phaserObject as any);
+        
         // Apply common properties
-        this.applyCommonProperties(obj, config);
+        this.applyCommonProperties(phaserObject, config);
         
         // Always stay under everything else
-        (obj as any).setDepth(typeof config.z === 'number' ? config.z : 0);
+        (phaserObject as any).setDepth(typeof config.z === 'number' ? config.z : 0);
         
         // Setup responsive scaling
-        this.setupResponsiveScaling(scene, obj, config);
+        this.setupResponsiveScaling(scene, phaserObject, config);
         
-        logDebug('BackgroundFactory', 'Background created successfully', { 
-            obj,
+        logDebug('BackgroundFactory', 'Background container created successfully', { 
+            backgroundContainer: backgroundContainer,
+            phaserObject: phaserObject,
             config: {
                 textureKey: config.textureKey,
                 fit: config.fit,
                 tile: config.tile
             },
-            dimensions: {
-                screenWidth: w,
-                screenHeight: h,
-                originalWidth: config.textureKey ? (obj as any).getData('originalWidth') : 'N/A',
-                originalHeight: config.textureKey ? (obj as any).getData('originalHeight') : 'N/A'
-            }
+            note: "Background now extends Container for child management"
         }, 'create');
-        return obj;
+        
+        return phaserObject;
     }
     
     private setupTextureFitting(scene: Phaser.Scene, img: Phaser.GameObjects.Image, config: any): void {

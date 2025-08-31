@@ -9,17 +9,21 @@ import {
     IContainer, 
     ContainerObjectConfig,
     IGameObject,
-    IScalable
+    IScalable,
+    IBounds
 } from './types';
 import { logDebug, logInfo } from '../core/Logger';
 
 export class Container extends BaseGameObject implements IContainer {
     // Container-specific properties
     public children: IGameObject[] = [];
-    private dock: 'top' | 'bottom' | 'left' | 'right' | 'center' | null = null;
-    private anchor: 'top-left' | 'top-center' | 'top-right' | 'center-left' | 'center' | 'center-right' | 'bottom-left' | 'bottom-center' | 'bottom-right' | null = null;
+    public dock: 'top' | 'bottom' | 'left' | 'right' | 'center' | null = null;
+    public anchor: 'top-left' | 'top-center' | 'top-right' | 'center-left' | 'center' | 'center-right' | 'bottom-left' | 'bottom-center' | 'bottom-right' | null = null;
     private followBackground: boolean = false;
-    private origin: { x: number; y: number } = { x: 0.5, y: 0.5 };
+    public origin: { x: number; y: number } = { x: 0.5, y: 0.5 };
+    
+    // Container name
+    public name: string;
     
     // Phaser container reference
     private phaserContainer: Phaser.GameObjects.Container | null = null;
@@ -33,6 +37,7 @@ export class Container extends BaseGameObject implements IContainer {
     constructor(config: ContainerObjectConfig, scene: Phaser.Scene) {
         super(config, scene);
         this.scene = scene;
+        this.name = config.id; // Use id as name
         
         // Initialize container-specific properties
         if (config.dock) this.dock = config.dock;
@@ -64,7 +69,7 @@ export class Container extends BaseGameObject implements IContainer {
             
             // Add to Phaser container if available
             if (this.phaserContainer && 'getPhaserObject' in child) {
-                const phaserObj = (child as any).getPhaserObject();
+                const phaserObj = (child as BaseGameObject).getPhaserObject();
                 if (phaserObj) {
                     this.phaserContainer.add(phaserObj);
                 }
@@ -74,7 +79,7 @@ export class Container extends BaseGameObject implements IContainer {
                 containerId: this.id,
                 containerName: this.name,
                 childId: child.id,
-                childName: 'name' in child ? (child as any).name : 'unknown',
+                childName: 'name' in child ? (child as BaseGameObject).name : 'unknown',
                 totalChildren: this.children.length
             }, 'addChild');
         }
@@ -85,7 +90,7 @@ export class Container extends BaseGameObject implements IContainer {
         if (index !== -1) {
             // Remove from Phaser container if available
             if (this.phaserContainer && 'getPhaserObject' in child) {
-                const phaserObj = (child as any).getPhaserObject();
+                const phaserObj = (child as BaseGameObject).getPhaserObject();
                 if (phaserObj) {
                     this.phaserContainer.remove(phaserObj);
                 }
@@ -119,7 +124,7 @@ export class Container extends BaseGameObject implements IContainer {
         if (this.phaserContainer) {
             this.children.forEach(child => {
                 if ('getPhaserObject' in child) {
-                    const phaserObj = (child as any).getPhaserObject();
+                    const phaserObj = (child as BaseGameObject).getPhaserObject();
                     if (phaserObj) {
                         this.phaserContainer!.remove(phaserObj);
                     }
@@ -206,13 +211,13 @@ export class Container extends BaseGameObject implements IContainer {
     
     public setOrigin(x: number, y: number): void {
         this.origin = { x, y };
-        if (this.phaserContainer) {
-            (this.phaserContainer as any).setOrigin(x, y);
-        }
-        logDebug('Container', 'Origin updated', {
+        // Note: In Phaser 3.9, Container origin cannot be changed after creation
+        // The origin values are used in positioning calculations instead
+        logDebug('Container', 'Origin updated (stored for positioning calculations)', {
             id: this.id,
             name: this.name,
-            origin: { x, y }
+            origin: { x, y },
+            note: "Origin affects positioning calculations, not Phaser Container properties"
         }, 'setOrigin');
     }
     
@@ -220,23 +225,25 @@ export class Container extends BaseGameObject implements IContainer {
     // Enhanced Resize for Container Hierarchy
     // ============================================================================
     
-    public override resize(scale: number, bounds?: { x: number; y: number; width: number; height: number }): void {
-        // Call parent resize first
+    /**
+     * Resize the container and all its children
+     */
+    public resize(scale: number, bounds?: IBounds): void {
         super.resize(scale, bounds);
         
-        // Resize all children recursively
-        this.children.forEach(child => {
-            if ('resize' in child) {
+        // Resize all children
+        for (const child of this.children) {
+            if (child && 'resize' in child) {
                 (child as IScalable).resize(scale, bounds);
             }
-        });
+        }
         
         logDebug('Container', 'Container and children resized', {
-            id: this.id,
-            name: this.name,
+            containerId: this.id,
+            containerName: this.name,
             scale,
-            childCount: this.children.length,
-            bounds
+            bounds,
+            childrenCount: this.children.length
         }, 'resize');
     }
     
@@ -320,8 +327,13 @@ export class Container extends BaseGameObject implements IContainer {
         // Create Phaser container
         this.phaserContainer = scene.add.container(this.x, this.y);
         
-        // Set origin
-        (this.phaserContainer as any).setOrigin(this.origin.x, this.origin.y);
+        // In Phaser 3.9, Container origin is set during creation
+        // We need to adjust the position to account for the origin
+        if (this.origin.x !== 0.5 || this.origin.y !== 0.5) {
+            const offsetX = (0.5 - this.origin.x) * this.width;
+            const offsetY = (0.5 - this.origin.y) * this.height;
+            this.phaserContainer.setPosition(this.x + offsetX, this.y + offsetY);
+        }
         
         // Set size
         if (this.width > 0 && this.height > 0) {
@@ -346,7 +358,8 @@ export class Container extends BaseGameObject implements IContainer {
             position: { x: this.x, y: this.y },
             size: { width: this.width, height: this.height },
             scale: this.scale,
-            origin: this.origin
+            origin: this.origin,
+            note: "Origin applied through position adjustment in Phaser 3.9"
         }, 'create');
         
         return this.phaserContainer;
@@ -356,7 +369,7 @@ export class Container extends BaseGameObject implements IContainer {
         // Update all children
         this.children.forEach(child => {
             if ('update' in child) {
-                (child as any).update(time, delta);
+                (child as BaseGameObject).update(time, delta);
             }
         });
     }
@@ -407,6 +420,157 @@ export class Container extends BaseGameObject implements IContainer {
     }
     
     // ============================================================================
+    // DOCKABLE AREA MANAGEMENT
+    // ============================================================================
+    
+    /**
+     * Check if this container has a dockable area
+     * Dockable area = container's position + size + origin
+     */
+    public hasDockableArea(): boolean {
+        return this.dock !== null || this.anchor !== null;
+    }
+    
+    /**
+     * Get the dockable area bounds of this container
+     * This represents the area where children can be positioned
+     */
+    public getDockableArea(): IBounds {
+        const bounds = this.getBounds();
+        
+        logDebug('Container', 'Getting dockable area', {
+            containerId: this.id,
+            containerName: this.name,
+            bounds: bounds,
+            dock: this.dock,
+            anchor: this.anchor,
+            origin: this.origin
+        }, 'getDockableArea');
+        
+        return bounds;
+    }
+    
+    /**
+     * Get the dockable area with padding/margin
+     * Useful for positioning children with some spacing from container edges
+     */
+    public getDockableAreaWithMargin(margin: number = 0): IBounds {
+        const bounds = this.getDockableArea();
+        
+        return {
+            x: bounds.x + margin,
+            y: bounds.y + margin,
+            width: bounds.width - (margin * 2),
+            height: bounds.height - (margin * 2),
+            left: bounds.left + margin,
+            right: bounds.right - margin,
+            top: bounds.top + margin,
+            bottom: bounds.bottom - margin,
+            centerX: bounds.centerX,
+            centerY: bounds.centerY
+        };
+    }
+    
+    /**
+     * Check if a point is within the dockable area
+     */
+    public isPointInDockableArea(x: number, y: number): boolean {
+        const bounds = this.getDockableArea();
+        
+        return x >= bounds.left && 
+               x <= bounds.right && 
+               y >= bounds.top && 
+               y <= bounds.bottom;
+    }
+    
+    /**
+     * Get the recommended position for a child based on dock/anchor
+     * This helps position children within the container's dockable area
+     */
+    public getChildPosition(childWidth: number, childHeight: number, childDock?: string, childAnchor?: string): { x: number; y: number } {
+        const bounds = this.getDockableArea();
+        const dock = childDock || this.dock;
+        const anchor = childAnchor || this.anchor;
+        
+        let x = bounds.centerX;
+        let y = bounds.centerY;
+        
+        // Apply dock positioning
+        if (dock) {
+            switch (dock) {
+                case 'top':
+                    y = bounds.top + (childHeight / 2);
+                    break;
+                case 'bottom':
+                    y = bounds.bottom - (childHeight / 2);
+                    break;
+                case 'left':
+                    x = bounds.left + (childWidth / 2);
+                    break;
+                case 'right':
+                    x = bounds.right - (childWidth / 2);
+                    break;
+                case 'center':
+                    // Already set to center
+                    break;
+            }
+        }
+        
+        // Apply anchor positioning
+        if (anchor) {
+            switch (anchor) {
+                case 'top-left':
+                    x = bounds.left + (childWidth / 2);
+                    y = bounds.top + (childHeight / 2);
+                    break;
+                case 'top-center':
+                    x = bounds.centerX;
+                    y = bounds.top + (childHeight / 2);
+                    break;
+                case 'top-right':
+                    x = bounds.right - (childWidth / 2);
+                    y = bounds.top + (childHeight / 2);
+                    break;
+                case 'center-left':
+                    x = bounds.left + (childWidth / 2);
+                    y = bounds.centerY;
+                    break;
+                case 'center':
+                    x = bounds.centerX;
+                    y = bounds.centerY;
+                    break;
+                case 'center-right':
+                    x = bounds.right - (childWidth / 2);
+                    y = bounds.centerY;
+                    break;
+                case 'bottom-left':
+                    x = bounds.left + (childWidth / 2);
+                    y = bounds.bottom - (childHeight / 2);
+                    break;
+                case 'bottom-center':
+                    x = bounds.centerX;
+                    y = bounds.bottom - (childHeight / 2);
+                    break;
+                case 'bottom-right':
+                    x = bounds.right - (childWidth / 2);
+                    y = bounds.bottom - (childHeight / 2);
+                    break;
+            }
+        }
+        
+        logDebug('Container', 'Calculated child position', {
+            containerId: this.id,
+            childDimensions: { width: childWidth, height: childHeight },
+            dock: dock,
+            anchor: anchor,
+            calculatedPosition: { x, y },
+            containerBounds: bounds
+        }, 'getChildPosition');
+        
+        return { x, y };
+    }
+    
+    // ============================================================================
     // Cleanup
     // ============================================================================
     
@@ -414,7 +578,7 @@ export class Container extends BaseGameObject implements IContainer {
         // Destroy all children first
         this.children.forEach(child => {
             if ('destroy' in child) {
-                (child as any).destroy();
+                (child as BaseGameObject).destroy();
             }
         });
         

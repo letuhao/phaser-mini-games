@@ -134,7 +134,16 @@ export class ResponsiveManager implements IResponsiveSubject {
                     originalWidth: width,
                     originalHeight: height,
                     finalWidth: width,
-                    finalHeight: height
+                    finalHeight: height,
+                    // Container bounds (same as image bounds for now)
+                    containerLeft: x,
+                    containerRight: x + width,
+                    containerTop: y,
+                    containerBottom: y + height,
+                    containerWidth: width,
+                    containerHeight: height,
+                    containerCenterX: x + width / 2,
+                    containerCenterY: y + height / 2
                 };
             } else {
                 logWarn('ResponsiveManager', 'No background object found', {
